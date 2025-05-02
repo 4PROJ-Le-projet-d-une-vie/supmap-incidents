@@ -1,0 +1,27 @@
+services:
+  users-service:
+    build:
+      context: ./
+    container_name: "users-service"
+    ports:
+      - "8080:80"
+    environment:
+      JWT_SECRET: jwtsecret
+      DB_URL: postgres://root:root@database:5432/public
+    depends_on:
+      database:
+        condition: service_healthy
+  database:
+    image: postgres:17.4
+    container_name: database
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: public
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U root -d public" ]
+      interval: 5s
+      timeout: 30s
+    ports:
+      - "5432:5432"
