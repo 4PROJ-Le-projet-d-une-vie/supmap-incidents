@@ -4,16 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"supmap-users/internal/config"
 )
 
+type RoleDTO struct {
+	Name string `json:"name"`
+}
+
 type PartialUserDTO struct {
-	ID             int64     `json:"id"`
-	Handle         string    `json:"handle"`
+	ID     int64    `json:"id"`
+	Handle string   `json:"handle"`
+	Role   *RoleDTO `json:"role"`
 }
 
 func UserIdToDTO(userId int64) (*PartialUserDTO, error) {
-	fmt.Println(userId)
-	res, err := http.Get(fmt.Sprintf("http://localhost:8080/internal/user/%d", userId))
+	res, err := http.Get(fmt.Sprintf("%s/internal/user/%d", config.UsersBaseUrl, userId))
 	if err != nil {
 		return nil, err
 	}
