@@ -9,6 +9,7 @@ type Type struct {
 
 	ID                          int64  `bun:"id,pk,autoincrement"`
 	Name                        string `bun:"name,notnull"`
+	Description                 string `bun:"description"`
 	LifetimeWithoutConfirmation int    `bun:"lifetime_without_confirmation,notnull"`
 	NegativeReportsThreshold    int    `bun:"negative_reports_threshold,notnull"`
 	GlobalLifetime              int    `bun:"global_lifetime,notnull"`
