@@ -116,21 +116,3 @@ func (i *Incidents) CreateIncident(ctx context.Context, incident *models.Inciden
 	}
 	return nil
 }
-
-func (i *Incidents) GetAllIncidents(ctx context.Context) ([]models.Incident, error) {
-	var incidents []models.Incident
-
-	err := i.bun.NewSelect().
-		Model(&incidents).
-		Relation("Type").
-		Relation("Interactions").
-		Where("i.deleted_at IS NULL").
-		Order("i.created_at DESC").
-		Scan(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return incidents, nil
-}

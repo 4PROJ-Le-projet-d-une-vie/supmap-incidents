@@ -21,34 +21,6 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-// @Summary Récupérer tous les incidents
-// @Description Récupère tous les incidents non supprimés avec inclusion optionnelle des interactions
-// @Tags incidents
-// @Accept json
-// @Produce json
-// @Param include query string false "Inclure des données additionnelles : 'interactions' pour le détail complet des interactions ou 'summary' pour les statistiques" Enums(interactions,summary)
-// @Success 200 {array} dto.IncidentDTO "Liste des incidents récupérée avec succès"
-// @Success 200 {object} []dto.IncidentDTO{interactions=[]dto.InteractionDTO} "Exemple avec les interactions incluses"
-// @Success 200 {object} []dto.IncidentDTO{interactions_summary=dto.InteractionsSummaryDTO} "Exemple avec le résumé inclus"
-// @Failure 500 {object} InternalErrorResponse "Erreur interne du serveur"
-// @Router /incidents [get]
-func (s *Server) getIncidents() http.HandlerFunc {
-	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
-		incidents, err := s.service.GetIncidents(r.Context())
-		if err != nil {
-			return encodeNil(http.StatusInternalServerError, w)
-		}
-
-		interactionState := decodeIncludeParam(r)
-		var incidentsDTOs = make([]dto.IncidentDTO, len(incidents))
-		for i, incident := range incidents {
-			incidentsDTOs[i] = *dto.IncidentToDTO(&incident, interactionState)
-		}
-
-		return encode(incidentsDTOs, http.StatusOK, w)
-	})
-}
-
 // CreateIncident godoc
 // @Summary Créer un incident
 // @Description Crée un nouvel incident si aucun n'existe dans la zone (<100m). Sinon, ajoute une interaction à l'incident existant.

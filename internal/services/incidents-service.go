@@ -14,15 +14,15 @@ import (
 )
 
 type Service struct {
-	log    *slog.Logger
-	config *config.Config
+	log       *slog.Logger
+	config    *config.Config
 	incidents *repository.Incidents
 }
 
 func NewService(log *slog.Logger, config *config.Config, incidents *repository.Incidents) *Service {
 	return &Service{
-		log: log,
-		config: config,
+		log:       log,
+		config:    config,
 		incidents: incidents,
 	}
 }
@@ -65,10 +65,6 @@ func DecodeErrorWithBody[T any](err error) *ErrorWithBody[T] {
 	return nil
 }
 
-func (s *Service) GetIncidents(ctx context.Context) ([]models.Incident, error) {
-	return s.incidents.GetAllIncidents(ctx)
-}
-
 func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, body *validations.CreateIncidentValidator) (*models.Incident, error) {
 
 	// Check si le type existe
@@ -80,7 +76,7 @@ func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, 
 	if incidentType == nil {
 		return nil, &ErrorWithCode{
 			Message: "Incident type does not exists",
-			Code: 400,
+			Code:    400,
 		}
 	}
 
@@ -91,10 +87,10 @@ func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, 
 	}
 
 	if last != nil {
-		if time.Since(last.CreatedAt) < 60 * time.Second {
+		if time.Since(last.CreatedAt) < 60*time.Second {
 			return nil, &ErrorWithCode{
 				Message: "Too many incidents reported",
-				Code: http.StatusTooManyRequests,
+				Code:    http.StatusTooManyRequests,
 			}
 		}
 	}
@@ -128,9 +124,9 @@ func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, 
 
 	// Insérer l'incident
 	incident := &models.Incident{
-		TypeID: incidentType.ID,
-		UserID: user.ID,
-		Latitude: *body.Latitude,
+		TypeID:    incidentType.ID,
+		UserID:    user.ID,
+		Latitude:  *body.Latitude,
 		Longitude: *body.Longitude,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),

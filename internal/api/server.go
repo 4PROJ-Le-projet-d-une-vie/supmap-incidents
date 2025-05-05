@@ -32,7 +32,6 @@ func (s *Server) Start() error {
 
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
 
-	mux.Handle("GET /incident", s.getIncidents())
 	mux.Handle("POST /incident", s.AuthMiddleware()(s.CreateIncident()))
 
 	server := &http.Server{
