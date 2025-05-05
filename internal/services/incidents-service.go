@@ -144,3 +144,22 @@ func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, 
 
 	return inserted, nil
 }
+
+func (s *Service) GetInRadius(ctx context.Context, lat, lng float64, radius int64) ([]models.IncidentWithDistance, error) {
+	incidents, err := s.incidents.FindIncidentsInZone(ctx, &lat, &lng, radius, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, incident := range incidents {
+		completed, err := s.incidents.FindIncidentById(ctx, incident.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		incidents[i].Type = completed.Type
+		incidents[i].Interactions = completed.Interactions
+	}
+
+	return incidents, err
+}

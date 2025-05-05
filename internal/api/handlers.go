@@ -6,7 +6,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/matheodrd/httphelper/handler"
 	"net/http"
+	"reflect"
 	"strconv"
+	"strings"
 	"supmap-users/internal/api/validations"
 	"supmap-users/internal/models"
 	"supmap-users/internal/models/dto"
@@ -19,6 +21,56 @@ type InternalErrorResponse struct {
 
 type ErrorResponse struct {
 	Error string `json:"error"`
+}
+
+// GetAllInRadius godoc
+// @Summary Récupérer les incidents dans un rayon donné
+// @Description Récupère tous les incidents non supprimés situés dans un rayon donné à partir des coordonnées passées en paramètre.
+// @Description Cette requête est très couteuse car elle effectue de nombreux appels à la base de données pour charger l'entièreté des données. Elle est à utiliser avec précautions !
+// @Tags incidents
+// @Accept json
+// @Produce json
+// @Param lat query number true "Latitude du centre de la recherche"
+// @Param lng query number true "Longitude du centre de la recherche"
+// @Param radius query integer true "Rayon de recherche en mètres"
+// @Param include query string false "Inclure des données additionnelles : 'interactions' pour le détail complet ou 'summary' pour un résumé" Enums(interactions,summary)
+// @Success 200 {array} dto.IncidentWithDistanceDTO "Liste des incidents dans le rayon, avec distance calculée"
+// @Failure 400 {object} ErrorResponse "Paramètres invalides ou manquants"
+// @Failure 500 {object} InternalErrorResponse "Erreur interne du serveur"
+// @Router /incident [get]
+func (s *Server) GetAllInRadius() http.HandlerFunc {
+	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
+		include := decodeIncludeParam(r)
+
+		latitude, err := decodeParamAs[float64](r, "lat")
+		if err != nil {
+			return encode(&ErrorResponse{Error: err.Error()}, http.StatusBadRequest, w)
+		}
+
+		longitude, err := decodeParamAs[float64](r, "lng")
+		if err != nil {
+			return encode(&ErrorResponse{Error: err.Error()}, http.StatusBadRequest, w)
+		}
+
+		radius, err := decodeParamAs[int64](r, "radius")
+		if err != nil {
+			return encode(&ErrorResponse{Error: err.Error()}, http.StatusBadRequest, w)
+		}
+
+		incidents, err := s.service.GetInRadius(r.Context(), latitude, longitude, radius)
+		if err != nil {
+			if ewc := services.DecodeErrorWithCode(err); ewc != nil {
+				return encode(ewc, ewc.Code, w)
+			}
+		}
+
+		var incidentsDTOs = make([]dto.IncidentWithDistanceDTO, len(incidents))
+		for i, incident := range incidents {
+			incidentsDTOs[i] = *dto.IncidentWithDistanceToDTO(&incident, include)
+		}
+
+		return encode(incidentsDTOs, http.StatusOK, w)
+	})
 }
 
 // CreateIncident godoc
@@ -80,6 +132,34 @@ func decodeParamAsInt64(param string, r *http.Request) (int64, error) {
 		return 0, err
 	}
 	return converted, nil
+}
+
+func decodeParamAs[T any](r *http.Request, param string) (T, error) {
+	var zero T
+
+	query := r.URL.Query()
+	var value = query.Get(param)
+	if !query.Has(param) || value == "" {
+		return zero, fmt.Errorf("parameter %s not provided", param)
+	}
+
+	var result any
+	var err error
+
+	switch any(zero).(type) {
+	case float64:
+		result, err = strconv.ParseFloat(strings.TrimSpace(value), 64)
+	case int64:
+		result, err = strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+	default:
+		err = fmt.Errorf("unsupported type %s", reflect.TypeOf(zero).String())
+	}
+
+	if err != nil {
+		return zero, fmt.Errorf("invalid value for %s: %w", param, err)
+	}
+
+	return result.(T), nil
 }
 
 func decodeIncludeParam(r *http.Request) dto.InteractionsResultState {

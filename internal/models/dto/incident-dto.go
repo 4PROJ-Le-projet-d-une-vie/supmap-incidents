@@ -19,6 +19,11 @@ type IncidentDTO struct {
 	InteractionsSummary *InteractionsSummaryDTO `json:"interactions_summary,omitempty"`
 }
 
+type IncidentWithDistanceDTO struct {
+	IncidentDTO
+	Distance float64 `json:"distance"`
+}
+
 func IncidentToDTO(incident *models.Incident, interactionsState InteractionsResultState) *IncidentDTO {
 	partialUserDTO, _ := UserIdToDTO(incident.UserID)
 	incidentDTO := IncidentDTO{
@@ -51,4 +56,23 @@ func buildInteractionsDTO(interactions []models.Interaction) []InteractionDTO {
 		interactionsDTO[i] = *InteractionToDTO(dto, false)
 	}
 	return interactionsDTO
+}
+
+func IncidentWithDistanceToDTO(incident *models.IncidentWithDistance, interactionsState InteractionsResultState) *IncidentWithDistanceDTO {
+	incidentDTO := *IncidentToDTO(&models.Incident{
+		ID:           incident.ID,
+		UserID:       incident.UserID,
+		Type:         incident.Type,
+		Latitude:     incident.Latitude,
+		Longitude:    incident.Longitude,
+		CreatedAt:    incident.CreatedAt,
+		UpdatedAt:    incident.UpdatedAt,
+		DeletedAt:    incident.DeletedAt,
+		Interactions: incident.Interactions,
+	}, interactionsState)
+
+	return &IncidentWithDistanceDTO{
+		IncidentDTO: incidentDTO,
+		Distance:    incident.Distance,
+	}
 }
