@@ -57,7 +57,7 @@ func (s *Server) GetAllInRadius() http.HandlerFunc {
 			return encode(&ErrorResponse{Error: err.Error()}, http.StatusBadRequest, w)
 		}
 
-		incidents, err := s.service.GetInRadius(r.Context(), latitude, longitude, radius)
+		incidents, err := s.service.FindIncidentsInRadius(r.Context(), latitude, longitude, radius)
 		if err != nil {
 			if ewc := services.DecodeErrorWithCode(err); ewc != nil {
 				return encode(ewc, ewc.Code, w)
@@ -171,7 +171,7 @@ func (s *Server) GetUserHistory() http.HandlerFunc {
 // @Router /incident/types [get]
 func (s *Server) GetIncidentsTypes() http.HandlerFunc {
 	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
-		types, err := s.service.FindAllIncidentTypes(r.Context())
+		types, err := s.service.GetAllIncidentTypes(r.Context())
 		if err != nil {
 			return err
 		}

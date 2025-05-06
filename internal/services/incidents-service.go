@@ -67,7 +67,7 @@ func DecodeErrorWithBody[T any](err error) *ErrorWithBody[T] {
 	return nil
 }
 
-func (s *Service) FindAllIncidentTypes(ctx context.Context) ([]models.Type, error) {
+func (s *Service) GetAllIncidentTypes(ctx context.Context) ([]models.Type, error) {
 	return s.incidents.FindAllIncidentTypes(ctx)
 }
 
@@ -167,7 +167,7 @@ func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, 
 	return inserted, nil
 }
 
-func (s *Service) GetInRadius(ctx context.Context, lat, lng float64, radius int64) ([]models.IncidentWithDistance, error) {
+func (s *Service) FindIncidentsInRadius(ctx context.Context, lat, lng float64, radius int64) ([]models.IncidentWithDistance, error) {
 	incidents, err := s.incidents.FindIncidentsInZone(ctx, &lat, &lng, radius, nil)
 	if err != nil {
 		return nil, err
