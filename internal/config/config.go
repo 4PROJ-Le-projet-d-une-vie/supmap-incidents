@@ -11,7 +11,6 @@ type Config struct {
 	ENV          string `env:"ENV" envDefault:"production"`
 	DbUrl        string `env:"DB_URL"`
 	PORT         string `env:"PORT"`
-	JwtSecret    string `env:"JWT_SECRET"`
 	UsersBaseUrl string `env:"USERS_BASE_URL"`
 }
 
