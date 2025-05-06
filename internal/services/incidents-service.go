@@ -67,6 +67,10 @@ func DecodeErrorWithBody[T any](err error) *ErrorWithBody[T] {
 	return nil
 }
 
+func (s *Service) FindAllIncidentTypes(ctx context.Context) ([]models.Type, error) {
+	return s.incidents.FindAllIncidentTypes(ctx)
+}
+
 func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, body *validations.CreateIncidentValidator) (*models.Incident, error) {
 
 	// Check si le type existe

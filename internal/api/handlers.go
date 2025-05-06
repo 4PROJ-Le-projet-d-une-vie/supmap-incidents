@@ -160,6 +160,22 @@ func (s *Server) GetUserHistory() http.HandlerFunc {
 	})
 }
 
+func (s *Server) GetIncidentsTypes() http.HandlerFunc {
+	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
+		types, err := s.service.FindAllIncidentTypes(r.Context())
+		if err != nil {
+			return err
+		}
+
+		typesDTOs := make([]dto.TypeDTO, len(types))
+		for i, t := range types {
+			typesDTOs[i] = *dto.TypeToDTO(&t)
+		}
+
+		return encode(typesDTOs, http.StatusOK, w)
+	})
+}
+
 // UserInteractWithIncident godoc
 // @Summary Crée une interaction avec un incident
 // @Description Permet à un utilisateur d'interagir avec un incident en fonction de son ID et de son statut d'interaction.

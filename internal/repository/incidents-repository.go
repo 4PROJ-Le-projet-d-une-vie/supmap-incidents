@@ -23,6 +23,22 @@ func NewIncidents(db *bun.DB, log *slog.Logger) *Incidents {
 	}
 }
 
+func (i *Incidents) FindAllIncidentTypes(ctx context.Context) ([]models.Type, error) {
+	var types []models.Type
+	err := i.bun.NewSelect().
+		Model(&types).
+		Order("id ASC").
+		Scan(ctx)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	return types, nil
+}
+
 func (i *Incidents) GetTypeById(ctx context.Context, id int64) (*models.Type, error) {
 	var incidentType models.Type
 	err := i.bun.NewSelect().
