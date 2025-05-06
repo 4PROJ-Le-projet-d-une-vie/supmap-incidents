@@ -53,6 +53,26 @@ func (i *Incidents) FindIncidentById(ctx context.Context, id int64) (*models.Inc
 	return &incident, nil
 }
 
+func (i *Incidents) FindUserHistory(ctx context.Context, user *dto.PartialUserDTO) ([]models.Incident, error) {
+	var incidents []models.Incident
+
+	err := i.bun.NewSelect().
+		Model(&incidents).
+		Relation("Type").
+		Relation("Interactions").
+		Where("i.user_id = ?", user.ID).
+		Where("i.deleted_at IS NOT NULL").
+		Scan(ctx)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	return incidents, err
+}
+
 func (i *Incidents) GetLastUserIncident(ctx context.Context, user *dto.PartialUserDTO) (*models.Incident, error) {
 	var incident models.Incident
 	err := i.bun.NewSelect().

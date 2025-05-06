@@ -163,3 +163,7 @@ func (s *Service) GetInRadius(ctx context.Context, lat, lng float64, radius int6
 
 	return incidents, err
 }
+
+func (s *Service) GetUserHistory(ctx context.Context, user *dto.PartialUserDTO) ([]models.Incident, error) {
+	return s.incidents.FindUserHistory(ctx, user)
+}

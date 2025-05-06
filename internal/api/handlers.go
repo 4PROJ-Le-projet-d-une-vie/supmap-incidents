@@ -125,6 +125,41 @@ func (s *Server) CreateIncident() http.HandlerFunc {
 	})
 }
 
+// GetUserHistory godoc
+// @Summary Récupérer l’historique des incidents de l’utilisateur
+// @Description Récupère tous les incidents créés par l’utilisateur authentifié.
+// @Description L'historique ne comprend que les incidents qui ont été supprimés.
+// @Tags incidents
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param include query string false "Inclure des données additionnelles : 'interactions' pour les détails complets ou 'summary' pour les statistiques" Enums(interactions,summary)
+// @Success 200 {array} dto.IncidentDTO "Liste des anciens incidents (supprimés) de l'utilisateur"
+// @Failure 401 {object} ErrorResponse "Utilisateur non authentifié"
+// @Failure 500 {object} InternalErrorResponse "Erreur interne du serveur"
+// @Router /incident/user/history [get]
+func (s *Server) GetUserHistory() http.HandlerFunc {
+	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
+		user, ok := r.Context().Value("user").(*dto.PartialUserDTO)
+		if !ok {
+			return encodeNil(http.StatusUnauthorized, w)
+		}
+
+		incidents, err := s.service.GetUserHistory(r.Context(), user)
+		if err != nil {
+			return err
+		}
+
+		interactionState := decodeIncludeParam(r)
+		var incidentsDTOs = make([]dto.IncidentDTO, len(incidents))
+		for i, incident := range incidents {
+			incidentsDTOs[i] = *dto.IncidentToDTO(&incident, interactionState)
+		}
+
+		return encode(incidentsDTOs, http.StatusOK, w)
+	})
+}
+
 func decodeParamAsInt64(param string, r *http.Request) (int64, error) {
 	value := r.PathValue(param)
 	converted, err := strconv.ParseInt(value, 10, 64)
