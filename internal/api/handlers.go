@@ -160,6 +160,15 @@ func (s *Server) GetUserHistory() http.HandlerFunc {
 	})
 }
 
+// GetIncidentsTypes godoc
+// @Summary Récupère tous les types d'incidents
+// @Description Permet de récupérer la liste de tous les types d'incidents.
+// @Tags incidents types
+// @Accept json
+// @Produce json
+// @Success 200 {array} dto.TypeDTO "Liste des types d'incidents"
+// @Failure 500 {object} services.ErrorWithCode "Erreur interne du serveur"
+// @Router /incident/types [get]
 func (s *Server) GetIncidentsTypes() http.HandlerFunc {
 	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
 		types, err := s.service.FindAllIncidentTypes(r.Context())
@@ -173,6 +182,38 @@ func (s *Server) GetIncidentsTypes() http.HandlerFunc {
 		}
 
 		return encode(typesDTOs, http.StatusOK, w)
+	})
+}
+
+// GetIncidentTypeById godoc
+// @Summary Récupère un type d'incident par son ID
+// @Description Permet de récupérer les détails d'un type d'incident spécifié par son ID.
+// @Tags incidents types
+// @Accept json
+// @Produce json
+// @Param id path int64 true "ID du type d'incident"
+// @Success 200 {object} dto.TypeDTO "Type d'incident trouvé avec succès"
+// @Failure 400 {object} services.ErrorWithCode "ID du type d'incident invalide"
+// @Failure 404 {object} services.ErrorWithCode "Type d'incident non trouvé"
+// @Failure 500 {object} services.ErrorWithCode "Erreur interne du serveur"
+// @Router /incident/types/{id} [get]
+func (s *Server) GetIncidentTypeById() http.HandlerFunc {
+	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
+		id, err := decodeParamAsInt64("id", r)
+		if err != nil {
+			return err
+		}
+
+		t, err := s.service.FindTypeById(r.Context(), id)
+		if err != nil {
+			if ewc := services.DecodeErrorWithCode(err); ewc != nil {
+				return encode(ewc, ewc.Code, w)
+			}
+			return err
+		}
+
+		typeDTO := dto.TypeToDTO(t)
+		return encode(typeDTO, http.StatusOK, w)
 	})
 }
 

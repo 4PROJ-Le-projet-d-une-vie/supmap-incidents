@@ -39,7 +39,7 @@ func (i *Incidents) FindAllIncidentTypes(ctx context.Context) ([]models.Type, er
 	return types, nil
 }
 
-func (i *Incidents) GetTypeById(ctx context.Context, id int64) (*models.Type, error) {
+func (i *Incidents) FindIncidentTypeById(ctx context.Context, id int64) (*models.Type, error) {
 	var incidentType models.Type
 	err := i.bun.NewSelect().
 		Model(&incidentType).

@@ -71,10 +71,26 @@ func (s *Service) FindAllIncidentTypes(ctx context.Context) ([]models.Type, erro
 	return s.incidents.FindAllIncidentTypes(ctx)
 }
 
+func (s *Service) FindTypeById(ctx context.Context, id int64) (*models.Type, error) {
+	t, err := s.incidents.FindIncidentTypeById(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if t == nil {
+		return nil, &ErrorWithCode{
+			Message: "This incident type does not exists",
+			Code:    http.StatusNotFound,
+		}
+	}
+
+	return t, err
+}
+
 func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, body *validations.CreateIncidentValidator) (*models.Incident, error) {
 
 	// Check si le type existe
-	incidentType, err := s.incidents.GetTypeById(ctx, body.TypeId)
+	incidentType, err := s.incidents.FindIncidentTypeById(ctx, body.TypeId)
 	if err != nil {
 		return nil, err
 	}
