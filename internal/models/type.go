@@ -13,4 +13,5 @@ type Type struct {
 	LifetimeWithoutConfirmation int    `bun:"lifetime_without_confirmation,notnull"`
 	NegativeReportsThreshold    int    `bun:"negative_reports_threshold,notnull"`
 	GlobalLifetime              int    `bun:"global_lifetime,notnull"`
+	NeedRecalculation           bool   `bun:"need_recalculation"`
 }

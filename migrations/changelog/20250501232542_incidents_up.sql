@@ -7,7 +7,8 @@ CREATE TABLE incident_types
     description                   TEXT         NOT NULL,
     lifetime_without_confirmation INTEGER      NOT NULL, -- en secondes
     negative_reports_threshold    INTEGER      NOT NULL,
-    global_lifetime               INTEGER      NOT NULL  -- en secondes
+    global_lifetime               INTEGER      NOT NULL, -- en secondes
+    need_recalculation            BOOLEAN      NOT NULL
 );
 
 CREATE TABLE incidents
