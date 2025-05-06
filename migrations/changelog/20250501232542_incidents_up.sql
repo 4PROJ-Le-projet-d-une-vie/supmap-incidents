@@ -11,6 +11,13 @@ CREATE TABLE incident_types
     need_recalculation            BOOLEAN      NOT NULL
 );
 
+INSERT INTO incident_types (name, description, lifetime_without_confirmation, negative_reports_threshold, global_lifetime, need_recalculation) VALUES
+('Accident', 'Collision ou incident impliquant un ou plusieurs véhicules.', 3600, 10, 21600, false),
+('Route Fermée', 'Route temporairement inaccessible à la circulation.', 86400, 5, 172800, true),
+('Embouteillage', 'Circulation fortement ralentie ou à l’arrêt.', 1800, 5, 7200, true),
+('Contrôle de Police', 'Contrôle routier en cours par les forces de l’ordre.', 57600, 10, 172800, false),
+('Obstacles', 'Objets ou éléments gênant la circulation sur la chaussée.', 3600, 10, 21600, false);
+
 CREATE TABLE incidents
 (
     id         SERIAL PRIMARY KEY,
