@@ -221,6 +221,7 @@ func (s *Server) GetIncidentTypeById() http.HandlerFunc {
 // @Summary Crée une interaction avec un incident
 // @Description Permet à un utilisateur d'interagir avec un incident en fonction de son ID et de son statut d'interaction.
 // @Tags interactions
+// @Security BearerAuth
 // @Accept json
 // @Produce json
 // @Param body body validations.CreateInteractionValidator true "Informations de l'interaction"
