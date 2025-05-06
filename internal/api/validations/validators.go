@@ -15,7 +15,7 @@ func (e ValidationError) Error() string {
 }
 
 type CreateIncidentValidator struct {
-	TypeId    int64   `json:"type_id" validate:"required"`
+	TypeId    int64    `json:"type_id" validate:"required"`
 	Latitude  *float64 `json:"lat" validate:"required,latitude"`
 	Longitude *float64 `json:"lng" validate:"required,longitude"`
 }
@@ -71,4 +71,17 @@ func validateLongitude(fl validator.FieldLevel) bool {
 	}
 
 	return value >= -180 && value <= 180
+}
+
+type CreateInteractionValidator struct {
+	IncidentID     int64 `json:"incident_id" validate:"required"`
+	IsStillPresent *bool `json:"is_still_present" validate:"required"`
+}
+
+func (civ CreateInteractionValidator) Validate() error {
+	validate := validator.New()
+	if err := validate.Struct(civ); err != nil {
+		return err
+	}
+	return nil
 }

@@ -160,6 +160,46 @@ func (s *Server) GetUserHistory() http.HandlerFunc {
 	})
 }
 
+// UserInteractWithIncident godoc
+// @Summary Crée une interaction avec un incident
+// @Description Permet à un utilisateur d'interagir avec un incident en fonction de son ID et de son statut d'interaction.
+// @Tags interactions
+// @Accept json
+// @Produce json
+// @Param body body validations.CreateInteractionValidator true "Informations de l'interaction"
+// @Success 200 {object} dto.InteractionDTO "Interaction créée avec succès"
+// @Failure 400 {object} services.ErrorWithCode "Paramètres invalides"
+// @Failure 404 {object} services.ErrorWithCode "Incident non trouvé"
+// @Failure 409 {object} services.ErrorWithCode "Incident verrouillé"
+// @Failure 429 {object} services.ErrorWithCode "Trop d'interactions avec cet incident"
+// @Failure 500 {object} services.ErrorWithCode "Erreur interne du serveur"
+// @Router /incident/interact [post]
+func (s *Server) UserInteractWithIncident() http.HandlerFunc {
+	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
+		user, ok := r.Context().Value("user").(*dto.PartialUserDTO)
+		if !ok {
+			return encodeNil(http.StatusUnauthorized, w)
+		}
+
+		body, err := handler.Decode[validations.CreateInteractionValidator](r)
+		if err != nil {
+			return buildValidationErrors(err, w)
+		}
+
+		interaction, err := s.service.CreateInteraction(r.Context(), user, &body)
+		if err != nil {
+			if ewc := services.DecodeErrorWithCode(err); ewc != nil {
+				return encode(ewc, ewc.Code, w)
+			}
+			return err
+		}
+
+		includeParam := decodeIncludeParam(r)
+		interactionDTO := dto.InteractionToDTO(*interaction, includeParam)
+		return encode(interactionDTO, http.StatusOK, w)
+	})
+}
+
 func decodeParamAsInt64(param string, r *http.Request) (int64, error) {
 	value := r.PathValue(param)
 	converted, err := strconv.ParseInt(value, 10, 64)

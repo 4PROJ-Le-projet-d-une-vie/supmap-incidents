@@ -14,7 +14,7 @@ type InteractionDTO struct {
 	Incident *IncidentDTO `json:"incident,omitempty"`
 }
 
-func InteractionToDTO(interaction models.Interaction, includeIncidents bool) *InteractionDTO {
+func InteractionToDTO(interaction models.Interaction, includeIncidents InteractionsResultState) *InteractionDTO {
 	partialUserDTO, _ := UserIdToDTO(interaction.UserID)
 	interactionDTO := InteractionDTO{
 		ID:             interaction.ID,
@@ -23,8 +23,8 @@ func InteractionToDTO(interaction models.Interaction, includeIncidents bool) *In
 		CreatedAt:      interaction.CreatedAt,
 	}
 
-	if includeIncidents {
-		interactionDTO.Incident = IncidentToDTO(interaction.Incident, Ignore)
+	if includeIncidents != Ignore {
+		interactionDTO.Incident = IncidentToDTO(interaction.Incident, includeIncidents)
 	}
 
 	return &interactionDTO

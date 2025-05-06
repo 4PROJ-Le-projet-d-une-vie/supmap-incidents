@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"supmap-users/internal/models"
 	"supmap-users/internal/models/dto"
+	"time"
 )
 
 type Incidents struct {
@@ -38,19 +39,39 @@ func (i *Incidents) GetTypeById(ctx context.Context, id int64) (*models.Type, er
 	return &incidentType, nil
 }
 
-func (i *Incidents) FindIncidentById(ctx context.Context, id int64) (*models.Incident, error) {
+func (i *Incidents) FindIncidentByIdTx(ctx context.Context, exec bun.IDB, id int64) (*models.Incident, error) {
 	var incident models.Incident
 
-	err := i.bun.NewSelect().
+	// Verrouille l'incident en cours de récupération avant de récupérer les relations
+	err := exec.NewSelect().
+		Model(&incident).
+		Where("i.id = ?", id).
+		For("UPDATE"). // Verrouille l'incident
+		Scan(ctx)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	// Charge les relations après avoir verrouillé l'incident
+	err = exec.NewSelect().
 		Model(&incident).
 		Relation("Type").
-		Relation("Interactions").
+		Relation("Interactions"). // Charger les relations après
 		Where("i.id = ?", id).
 		Scan(ctx)
+
 	if err != nil {
 		return nil, err
 	}
+
 	return &incident, nil
+}
+
+func (i *Incidents) FindIncidentById(ctx context.Context, id int64) (*models.Incident, error) {
+	return i.FindIncidentByIdTx(ctx, i.bun, id)
 }
 
 func (i *Incidents) FindUserHistory(ctx context.Context, user *dto.PartialUserDTO) ([]models.Incident, error) {
@@ -134,5 +155,21 @@ func (i *Incidents) CreateIncident(ctx context.Context, incident *models.Inciden
 	if _, err := i.bun.NewInsert().Model(incident).Returning("id").Exec(ctx); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (i *Incidents) UpdateIncidentTx(ctx context.Context, exec bun.IDB, incident *models.Incident) error {
+	incident.UpdatedAt = time.Now()
+
+	_, err := exec.NewUpdate().
+		Model(incident).
+		Where("id = ?", incident.ID).
+		OmitZero().
+		Exec(ctx)
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -53,7 +53,7 @@ func IncidentToDTO(incident *models.Incident, interactionsState InteractionsResu
 func buildInteractionsDTO(interactions []models.Interaction) []InteractionDTO {
 	var interactionsDTO = make([]InteractionDTO, len(interactions))
 	for i, dto := range interactions {
-		interactionsDTO[i] = *InteractionToDTO(dto, false)
+		interactionsDTO[i] = *InteractionToDTO(dto, Ignore)
 	}
 	return interactionsDTO
 }

@@ -36,6 +36,8 @@ func (s *Server) Start() error {
 	mux.Handle("GET /incident/user/history", s.AuthMiddleware()(s.GetUserHistory()))
 	mux.Handle("POST /incident", s.AuthMiddleware()(s.CreateIncident()))
 
+	mux.Handle("POST /incident/interact", s.AuthMiddleware()(s.UserInteractWithIncident()))
+
 	server := &http.Server{
 		Addr:    ":" + s.Config.PORT,
 		Handler: mux,

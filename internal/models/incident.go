@@ -1,7 +1,6 @@
 package models
 
 import (
-	"context"
 	"github.com/uptrace/bun"
 	"time"
 )
@@ -21,11 +20,6 @@ type Incident struct {
 	// Relations
 	Type         *Type         `json:"type" bun:"rel:belongs-to,join:type_id=id"`
 	Interactions []Interaction `json:"interactions" bun:"rel:has-many,join:id=incident_id"`
-}
-
-func (i *Incident) BeforeUpdate(ctx context.Context) error {
-	i.UpdatedAt = time.Now()
-	return nil
 }
 
 type IncidentWithDistance struct {

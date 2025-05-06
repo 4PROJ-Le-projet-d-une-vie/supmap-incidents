@@ -14,16 +14,18 @@ import (
 )
 
 type Service struct {
-	log       *slog.Logger
-	config    *config.Config
-	incidents *repository.Incidents
+	log          *slog.Logger
+	config       *config.Config
+	incidents    *repository.Incidents
+	interactions *repository.Interactions
 }
 
-func NewService(log *slog.Logger, config *config.Config, incidents *repository.Incidents) *Service {
+func NewService(log *slog.Logger, config *config.Config, incidents *repository.Incidents, interactions *repository.Interactions) *Service {
 	return &Service{
-		log:       log,
-		config:    config,
-		incidents: incidents,
+		log:          log,
+		config:       config,
+		incidents:    incidents,
+		interactions: interactions,
 	}
 }
 
