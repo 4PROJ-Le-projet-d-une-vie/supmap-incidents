@@ -98,7 +98,7 @@ func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, 
 	if incidentType == nil {
 		return nil, &ErrorWithCode{
 			Message: "Incident type does not exists",
-			Code:    400,
+			Code:    http.StatusBadRequest,
 		}
 	}
 
