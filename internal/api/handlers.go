@@ -110,7 +110,6 @@ func (s *Server) CreateIncident() http.HandlerFunc {
 
 			if ewb := services.DecodeErrorWithBody[models.Incident](err); ewb != nil {
 				if incident, ok := ewb.GetBody().(models.Incident); ok {
-					fmt.Println(incident)
 					incidentDTO := dto.IncidentToDTO(&incident, interactionState)
 					return encode(incidentDTO, ewb.Code, w)
 				}

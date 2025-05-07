@@ -3,7 +3,6 @@ package redis
 import (
 	"context"
 	json2 "encoding/json"
-	"fmt"
 	"github.com/redis/go-redis/v9"
 	"log/slog"
 )
@@ -35,8 +34,6 @@ func (r *Redis) publisher(ctx context.Context) {
 			r.log.Info("stopping redis publisher")
 			return
 		case msg := <-r.send:
-			fmt.Println(msg.Channel)
-			fmt.Println(msg.Payload)
 			r.log.Info("message send to redis", "channel", msg.Channel, "message", msg.Payload)
 			err := r.client.Publish(ctx, msg.Channel, msg.Payload).Err()
 			if err != nil {
