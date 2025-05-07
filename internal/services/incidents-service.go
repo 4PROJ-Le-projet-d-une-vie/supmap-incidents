@@ -111,8 +111,8 @@ func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, 
 		return nil, err
 	}
 
-	if last != nil {
-		if time.Since(last.CreatedAt) < 60*time.Second {
+	if last != nil && s.config.ENV == "production" {
+		if time.Since(last.CreatedAt) < time.Minute {
 			return nil, &ErrorWithCode{
 				Message: "Too many incidents reported",
 				Code:    http.StatusTooManyRequests,
