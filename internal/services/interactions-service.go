@@ -27,7 +27,7 @@ func (s *Service) CreateInteraction(ctx context.Context, user *dto.PartialUserDT
 		}
 	}()
 
-	// Check si l'incident existe'
+	// Check si l'incident existe
 	incident, err := s.incidents.FindIncidentByIdTx(ctx, tx, body.IncidentID)
 	if err != nil {
 		return nil, err
@@ -44,6 +44,13 @@ func (s *Service) CreateInteraction(ctx context.Context, user *dto.PartialUserDT
 		return nil, &ErrorWithCode{
 			Message: "This incident is locked",
 			Code:    http.StatusLocked,
+		}
+	}
+
+	if incident.UserID == user.ID {
+		return nil, &ErrorWithCode{
+			Message: "You can't interact with your own incident",
+			Code:    http.StatusForbidden,
 		}
 	}
 
