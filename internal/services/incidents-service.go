@@ -10,6 +10,7 @@ import (
 	"supmap-users/internal/models"
 	"supmap-users/internal/models/dto"
 	"supmap-users/internal/repository"
+	"supmap-users/internal/services/redis"
 	"time"
 )
 
@@ -18,14 +19,16 @@ type Service struct {
 	config       *config.Config
 	incidents    *repository.Incidents
 	interactions *repository.Interactions
+	redis        *redis.Redis
 }
 
-func NewService(log *slog.Logger, config *config.Config, incidents *repository.Incidents, interactions *repository.Interactions) *Service {
+func NewService(log *slog.Logger, config *config.Config, incidents *repository.Incidents, interactions *repository.Interactions, redis *redis.Redis) *Service {
 	return &Service{
 		log:          log,
 		config:       config,
 		incidents:    incidents,
 		interactions: interactions,
+		redis:        redis,
 	}
 }
 
@@ -135,6 +138,8 @@ func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, 
 		// S'il a déjà réagi, alors 429
 		// Sinon 202 avec ajout de l'intéraction
 
+		// TODO vérifier type d'incident
+		// TODO ajouter un check pour "certifier" un évènement
 		return nil, &ErrorWithBody[models.Incident]{
 			ErrorWithCode: ErrorWithCode{
 				Message: "Interaction added to incident with id",
@@ -162,7 +167,13 @@ func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, 
 		return nil, err
 	}
 
-	// TODO Envoie d'un event dans le pub/sub redis (go routine)
+	err = s.redis.PublishMessage(s.config.IncidentChannel, &redis.IncidentMessage{
+		Data:   *dto.IncidentToRedis(inserted),
+		Action: redis.Create,
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	return inserted, nil
 }

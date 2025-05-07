@@ -76,3 +76,27 @@ func IncidentWithDistanceToDTO(incident *models.IncidentWithDistance, interactio
 		Distance:    incident.Distance,
 	}
 }
+
+type IncidentRedis struct {
+	ID        int64      `json:"id"`
+	UserId    int64      `json:"user_id"`
+	Type      *TypeDTO   `json:"type"`
+	Latitude  float64    `json:"lat"`
+	Longitude float64    `json:"lon"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+}
+
+func IncidentToRedis(incident *models.Incident) *IncidentRedis {
+	return &IncidentRedis{
+		ID:        incident.ID,
+		UserId:    incident.UserID,
+		Type:      TypeToDTO(incident.Type),
+		Latitude:  incident.Latitude,
+		Longitude: incident.Longitude,
+		CreatedAt: incident.CreatedAt,
+		UpdatedAt: incident.UpdatedAt,
+		DeletedAt: incident.DeletedAt,
+	}
+}

@@ -7,6 +7,7 @@ import (
 	"supmap-users/internal/api/validations"
 	"supmap-users/internal/models"
 	"supmap-users/internal/models/dto"
+	rediss "supmap-users/internal/services/redis"
 	"time"
 )
 
@@ -35,7 +36,7 @@ func (s *Service) CreateInteraction(ctx context.Context, user *dto.PartialUserDT
 	if incident == nil {
 		return nil, &ErrorWithCode{
 			Message: "Incident does not exists",
-			Code:    404,
+			Code:    http.StatusNotFound,
 		}
 	}
 
@@ -100,11 +101,16 @@ func (s *Service) CreateInteraction(ctx context.Context, user *dto.PartialUserDT
 			return nil, err
 		}
 
-		// TODO publier la fin de l'incident dans le pub/sub redis
+		err := s.redis.PublishMessage(s.config.IncidentChannel, rediss.IncidentMessage{
+			Data:   *dto.IncidentToRedis(inserted.Incident),
+			Action: rediss.Deleted,
+		})
+		if err != nil {
+			s.log.Error("failed to send message to redis", "channel", "test", "message", "message")
+		}
 
 		return nil, &ErrorWithCode{
-			Message: "Incident is now terminated",
-			Code:    http.StatusNoContent,
+			Code: http.StatusNoContent,
 		}
 	}
 
