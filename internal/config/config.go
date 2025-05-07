@@ -12,8 +12,8 @@ type Config struct {
 	DbUrl           string `env:"DB_URL"`
 	PORT            string `env:"PORT"`
 	UsersBaseUrl    string `env:"USERS_BASE_URL"`
-	RedisHost       string `env:"REDIS_HOST" envDefault:"localhost"`
-	RedisPort       string `env:"REDIS_PORT" envDefault:"6379"`
+	RedisHost       string `env:"REDIS_HOST"`
+	RedisPort       string `env:"REDIS_PORT"`
 	IncidentChannel string `env:"REDIS_INCIDENTS_CHANNEL" envDefault:"incidents"`
 }
 
