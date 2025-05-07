@@ -57,7 +57,9 @@ func (s *Server) GetAllInRadius() http.HandlerFunc {
 			return encode(&ErrorResponse{Error: err.Error()}, http.StatusBadRequest, w)
 		}
 
-		incidents, err := s.service.FindIncidentsInRadius(r.Context(), latitude, longitude, radius)
+		incidentType, _ := decodeParamAs[*int64](r, "type_id")
+
+		incidents, err := s.service.FindIncidentsInRadius(r.Context(), incidentType, latitude, longitude, radius)
 		if err != nil {
 			if ewc := services.DecodeErrorWithCode(err); ewc != nil {
 				return encode(ewc, ewc.Code, w)
@@ -281,6 +283,11 @@ func decodeParamAs[T any](r *http.Request, param string) (T, error) {
 	switch any(zero).(type) {
 	case float64:
 		result, err = strconv.ParseFloat(strings.TrimSpace(value), 64)
+	case *int64:
+		parsed, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+		if err == nil {
+			result = &parsed
+		}
 	case int64:
 		result, err = strconv.ParseInt(strings.TrimSpace(value), 10, 64)
 	default:

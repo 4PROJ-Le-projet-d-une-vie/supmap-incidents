@@ -130,7 +130,7 @@ func (i *Incidents) GetLastUserIncident(ctx context.Context, user *dto.PartialUs
 	return &incident, nil
 }
 
-func (i *Incidents) FindIncidentsInZone(ctx context.Context, lat, lng *float64, radius int64, typeId *int64) ([]models.IncidentWithDistance, error) {
+func (i *Incidents) FindIncidentsInZone(ctx context.Context, lat, lon *float64, radius int64, typeId *int64) ([]models.IncidentWithDistance, error) {
 	var incidents []models.IncidentWithDistance
 
 	rawSQL := `
@@ -146,17 +146,28 @@ func (i *Incidents) FindIncidentsInZone(ctx context.Context, lat, lng *float64, 
 			  FROM incidents
 			  WHERE deleted_at IS NULL
 				AND latitude BETWEEN (? - ? / 111000.0) AND (? + ? / 111000.0)
-				AND longitude BETWEEN (? - ? / 111000.0) AND (? + ? / 111000.0)) AS sub
+				AND longitude BETWEEN (? - ? / 111000.0) AND (? + ? / 111000.0)
+		`
+
+	args := []any{
+		lat, lon, lat,
+		lat, radius, lat, radius,
+		lon, radius, lon, radius,
+	}
+
+	if typeId != nil {
+		rawSQL += " AND type_id = ?"
+		args = append(args, typeId)
+	}
+
+	rawSQL += `
+		) AS sub
 		WHERE distance <= ?
 		ORDER BY distance;
 		`
+	args = append(args, radius)
 
-	err := i.bun.NewRaw(rawSQL,
-		lat, lng, lat,
-		lat, radius, lat, radius,
-		lng, radius, lng, radius,
-		radius,
-	).Scan(ctx, &incidents)
+	err := i.bun.NewRaw(rawSQL, args...).Scan(ctx, &incidents)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
