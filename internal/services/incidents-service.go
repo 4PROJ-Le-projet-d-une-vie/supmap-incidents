@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"sort"
 	"supmap-users/internal/api/validations"
 	"supmap-users/internal/config"
 	"supmap-users/internal/models"
@@ -128,18 +129,32 @@ func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, 
 	// En cas d’égalité parfaite : on choisit arbitrairement (ex. premier de la liste).
 	incidents, err := s.incidents.FindIncidentsInZone(ctx, body.Latitude, body.Longitude, 100, &body.TypeId)
 	if len(incidents) > 0 {
+		// Choisir l'évènement à intéragir
+		sort.SliceStable(incidents, func(i, j int) bool {
+			// Le plus d'intéractions
+			if len(incidents[i].Interactions) != len(incidents[j].Interactions) {
+				return len(incidents[i].Interactions) > len(incidents[j].Interactions)
+			}
+			// Sinon, le plus proche
+			return incidents[i].Distance < incidents[j].Distance
+		})
+
 		incident, err := s.incidents.FindIncidentById(ctx, incidents[0].ID)
 		if err != nil {
 			return nil, err
 		}
 
-		// TODO ajouter réaction
-		// Check si l'utilisateur à déjà réagit
-		// S'il a déjà réagi, alors 429
-		// Sinon 202 avec ajout de l'intéraction
+		newInteraction := &validations.CreateInteractionValidator{
+			IncidentID:     incident.ID,
+			IsStillPresent: toPtr(true),
+		}
 
-		// TODO vérifier type d'incident
-		// TODO ajouter un check pour "certifier" un évènement
+		if _, err := s.CreateInteraction(ctx, user, newInteraction); err != nil {
+			return nil, err
+		}
+
+		// TODO ajouter un check pour "certifier" un incident
+
 		return nil, &ErrorWithBody[models.Incident]{
 			ErrorWithCode: ErrorWithCode{
 				Message: "Interaction added to incident with id",
@@ -211,4 +226,8 @@ func (s *Service) FindIncidentsInRadius(ctx context.Context, typeId *int64, lat,
 
 func (s *Service) GetUserHistory(ctx context.Context, user *dto.PartialUserDTO) ([]models.Incident, error) {
 	return s.incidents.FindUserHistory(ctx, user)
+}
+
+func toPtr[T any](t T) *T {
+	return &t
 }
