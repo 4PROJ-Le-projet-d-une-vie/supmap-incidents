@@ -17,7 +17,7 @@ func (e ValidationError) Error() string {
 type CreateIncidentValidator struct {
 	TypeId    int64    `json:"type_id" validate:"required"`
 	Latitude  *float64 `json:"lat" validate:"required,latitude"`
-	Longitude *float64 `json:"lng" validate:"required,longitude"`
+	Longitude *float64 `json:"lon" validate:"required,longitude"`
 }
 
 func (civ CreateIncidentValidator) Validate() error {

@@ -10,7 +10,7 @@ type IncidentDTO struct {
 	User      *PartialUserDTO `json:"user"`
 	Type      *TypeDTO        `json:"type"`
 	Latitude  float64         `json:"lat"`
-	Longitude float64         `json:"lgn"`
+	Longitude float64         `json:"lon"`
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`
 	DeletedAt *time.Time      `json:"deleted_at,omitempty"`

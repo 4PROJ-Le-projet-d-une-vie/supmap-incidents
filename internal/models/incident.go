@@ -12,7 +12,7 @@ type Incident struct {
 	TypeID    int64      `json:"-" bun:"type_id,notnull"`
 	UserID    int64      `json:"user_id" bun:"user_id,notnull"`
 	Latitude  float64    `json:"lat" bun:"latitude,notnull"`
-	Longitude float64    `json:"lgn" bun:"longitude,notnull"`
+	Longitude float64    `json:"lon" bun:"longitude,notnull"`
 	CreatedAt time.Time  `json:"created_at" bun:"created_at,notnull,default:current_timestamp"`
 	UpdatedAt time.Time  `json:"updated_at" bun:"updated_at,notnull,default:current_timestamp"`
 	DeletedAt *time.Time `json:"deleted_at,omitempty" bun:"deleted_at"`
