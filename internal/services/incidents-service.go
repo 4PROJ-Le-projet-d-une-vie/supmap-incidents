@@ -138,22 +138,21 @@ func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, 
 			// Sinon, le plus proche
 			return incidents[i].Distance < incidents[j].Distance
 		})
+		chosen := incidents[0]
 
-		incident, err := s.incidents.FindIncidentById(ctx, incidents[0].ID)
+		incident, err := s.incidents.FindIncidentById(ctx, chosen.ID)
 		if err != nil {
 			return nil, err
 		}
 
 		newInteraction := &validations.CreateInteractionValidator{
-			IncidentID:     incident.ID,
+			IncidentID:     chosen.ID,
 			IsStillPresent: toPtr(true),
 		}
 
 		if _, err := s.CreateInteraction(ctx, user, newInteraction); err != nil {
 			return nil, err
 		}
-
-		// TODO ajouter un check pour "certifier" un incident
 
 		return nil, &ErrorWithBody[models.Incident]{
 			ErrorWithCode: ErrorWithCode{

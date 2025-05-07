@@ -94,6 +94,14 @@ func (s *Service) CreateInteraction(ctx context.Context, user *dto.PartialUserDT
 		return interactions[i].CreatedAt.After(interactions[j].CreatedAt)
 	})
 
+	positiveCount := 0
+	for _, interaction := range interactions {
+		if !interaction.IsStillPresent {
+			break // Coupe l'exécution dès qu'une intéraction négative est trouvée
+		}
+		positiveCount++
+	}
+
 	// Compte le nombre d'intéractions "négatives"
 	negativeCount := 0
 	for _, interaction := range interactions {
@@ -105,7 +113,7 @@ func (s *Service) CreateInteraction(ctx context.Context, user *dto.PartialUserDT
 
 	// Cas où il y a suffisamment d'intéractions négatives
 	// pour considérer l'incident comme terminé
-	if negativeCount >= inserted.Incident.Type.NegativeReportsThreshold {
+	if negativeCount == inserted.Incident.Type.NegativeReportsThreshold {
 		now := time.Now()
 		inserted.Incident.DeletedAt = &now
 
@@ -113,17 +121,19 @@ func (s *Service) CreateInteraction(ctx context.Context, user *dto.PartialUserDT
 			return nil, err
 		}
 
-		err := s.redis.PublishMessage(s.config.IncidentChannel, rediss.IncidentMessage{
+		_ = s.redis.PublishMessage(s.config.IncidentChannel, rediss.IncidentMessage{
 			Data:   *dto.IncidentToRedis(inserted.Incident),
 			Action: rediss.Deleted,
 		})
-		if err != nil {
-			s.log.Error("failed to send message to redis", "channel", "test", "message", "message")
-		}
 
 		return nil, &ErrorWithCode{
 			Code: http.StatusNoContent,
 		}
+	} else if positiveCount == inserted.Incident.Type.PositiveReportsThreshold {
+		_ = s.redis.PublishMessage(s.config.IncidentChannel, &rediss.IncidentMessage{
+			Data:   *dto.IncidentToRedis(incident),
+			Action: rediss.Certified,
+		})
 	}
 
 	return inserted, err
