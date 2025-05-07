@@ -80,6 +80,9 @@ func main() {
 		Addr: conf.RedisHost + ":" + conf.RedisPort,
 		DB:   0,
 	})
+	if err = rdb.Ping(context.Background()).Err(); err != nil {
+		log.Fatal(fmt.Errorf("failed to connect to redis: %w", err))
+	}
 	redisService := rediss.NewRedis(rdb, logger)
 	redisService.Run(context.Background())
 
