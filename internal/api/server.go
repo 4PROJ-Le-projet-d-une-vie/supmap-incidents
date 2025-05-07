@@ -40,6 +40,10 @@ func (s *Server) Start() error {
 
 	mux.Handle("POST /incident/interact", s.AuthMiddleware()(s.UserInteractWithIncident()))
 
+	// These routes are not exposed outside the LAN
+	//  server network and doesn't require securities
+	mux.Handle("GET /internal/incident", s.GetAllInRadius())
+
 	server := &http.Server{
 		Addr:    ":" + s.Config.PORT,
 		Handler: mux,
