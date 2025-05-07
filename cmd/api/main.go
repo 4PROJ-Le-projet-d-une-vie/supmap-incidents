@@ -17,9 +17,7 @@ import (
 	"supmap-users/internal/repository"
 	"supmap-users/internal/services"
 	rediss "supmap-users/internal/services/redis"
-	"supmap-users/internal/services/scheduler"
 	"supmap-users/migrations"
-	"time"
 )
 
 // @title SupMap Incidents API
@@ -89,9 +87,9 @@ func main() {
 	service := services.NewService(logger, conf, incidents, interactions, redisService)
 
 	// Taches actives pour l'auto modération des incidents
-	tasks := scheduler.NewScheduler(1*time.Second, incidents, interactions, redisService)
+	//tasks := scheduler.NewScheduler(1*time.Second, incidents, interactions, redisService)
 	//tasks.Run()
-	defer tasks.Stop()
+	//defer tasks.Stop()
 
 	// Create the HTTP server
 	server := api.NewServer(conf, logger, service)
