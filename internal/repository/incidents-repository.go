@@ -23,6 +23,24 @@ func NewIncidents(db *bun.DB, log *slog.Logger) *Incidents {
 	}
 }
 
+func (i *Incidents) GetAllActive(ctx context.Context, exec bun.IDB) ([]models.Incident, error) {
+	var types []models.Incident
+	err := exec.NewSelect().
+		Model(&types).
+		Relation("Type").
+		Relation("Interactions").
+		Where("deleted_at IS NULL").
+		Scan(ctx)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	return types, nil
+}
+
 func (i *Incidents) FindAllIncidentTypes(ctx context.Context) ([]models.Type, error) {
 	var types []models.Type
 	err := i.bun.NewSelect().
@@ -39,12 +57,15 @@ func (i *Incidents) FindAllIncidentTypes(ctx context.Context) ([]models.Type, er
 	return types, nil
 }
 
-func (i *Incidents) FindIncidentTypeById(ctx context.Context, id int64) (*models.Type, error) {
+func (i *Incidents) FindIncidentTypeById(ctx context.Context, id *int64) (*models.Type, error) {
 	var incidentType models.Type
-	err := i.bun.NewSelect().
-		Model(&incidentType).
-		Where("id = ?", id).
-		Scan(ctx)
+	query := i.bun.NewSelect().
+		Model(&incidentType)
+	if id != nil {
+		query = query.Where("id = ?", id)
+	}
+
+	err := query.Scan(ctx)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
