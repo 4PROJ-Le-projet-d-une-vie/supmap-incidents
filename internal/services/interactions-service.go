@@ -78,6 +78,11 @@ func (s *Service) CreateInteraction(ctx context.Context, user *dto.PartialUserDT
 		return nil, err
 	}
 
+	err = s.incidents.UpdateIncidentTx(ctx, tx, incident)
+	if err != nil {
+		return nil, err
+	}
+
 	inserted, err := s.interactions.FindInteractionByIdTx(ctx, tx, toInsert.ID)
 	if err != nil {
 		return nil, err
