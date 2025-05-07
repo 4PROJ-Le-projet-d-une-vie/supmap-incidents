@@ -321,6 +321,11 @@ func encode(body any, status int, w http.ResponseWriter) error {
 		return nil
 	}
 
+	if status == http.StatusNoContent {
+		w.WriteHeader(status)
+		return nil
+	}
+
 	if err := handler.Encode(body, status, w); err != nil {
 		return err
 	}
