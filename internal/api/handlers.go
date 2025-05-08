@@ -31,7 +31,7 @@ type ErrorResponse struct {
 // @Accept json
 // @Produce json
 // @Param lat query number true "Latitude du centre de la recherche"
-// @Param lng query number true "Longitude du centre de la recherche"
+// @Param lon query number true "Longitude du centre de la recherche"
 // @Param radius query integer true "Rayon de recherche en mètres"
 // @Param include query string false "Inclure des données additionnelles : 'interactions' pour le détail complet ou 'summary' pour un résumé" Enums(interactions,summary)
 // @Success 200 {array} dto.IncidentWithDistanceDTO "Liste des incidents dans le rayon, avec distance calculée"
@@ -47,7 +47,7 @@ func (s *Server) GetAllInRadius() http.HandlerFunc {
 			return encode(&ErrorResponse{Error: err.Error()}, http.StatusBadRequest, w)
 		}
 
-		longitude, err := decodeParamAs[float64](r, "lng")
+		longitude, err := decodeParamAs[float64](r, "lon")
 		if err != nil {
 			return encode(&ErrorResponse{Error: err.Error()}, http.StatusBadRequest, w)
 		}
