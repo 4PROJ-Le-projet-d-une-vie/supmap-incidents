@@ -32,17 +32,17 @@ func (s *Server) Start() error {
 
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
 
-	mux.Handle("GET /incident", s.GetAllInRadius())
-	mux.Handle("GET /incident/user/history", s.AuthMiddleware()(s.GetUserHistory()))
-	mux.Handle("GET /incident/types", s.GetIncidentsTypes())
-	mux.Handle("GET /incident/types/{id}", s.GetIncidentTypeById())
-	mux.Handle("POST /incident", s.AuthMiddleware()(s.CreateIncident()))
+	mux.Handle("GET /incidents", s.GetAllInRadius())
+	mux.Handle("GET /incidents/me/history", s.AuthMiddleware()(s.GetUserHistory()))
+	mux.Handle("GET /incidents/types", s.GetIncidentsTypes())
+	mux.Handle("GET /incidents/types/{id}", s.GetIncidentTypeById())
+	mux.Handle("POST /incidents", s.AuthMiddleware()(s.CreateIncident()))
 
-	mux.Handle("POST /incident/interact", s.AuthMiddleware()(s.UserInteractWithIncident()))
+	mux.Handle("POST /incidents/interactions", s.AuthMiddleware()(s.UserInteractWithIncident()))
 
 	// These routes are not exposed outside the LAN
 	//  server network and doesn't require securities
-	mux.Handle("GET /internal/incident", s.GetAllInRadius())
+	mux.Handle("GET /internal/incidents", s.GetAllInRadius())
 
 	server := &http.Server{
 		Addr:    ":" + s.Config.PORT,

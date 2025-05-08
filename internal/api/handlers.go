@@ -37,7 +37,7 @@ type ErrorResponse struct {
 // @Success 200 {array} dto.IncidentWithDistanceDTO "Liste des incidents dans le rayon, avec distance calculée"
 // @Failure 400 {object} ErrorResponse "Paramètres invalides ou manquants"
 // @Failure 500 {object} InternalErrorResponse "Erreur interne du serveur"
-// @Router /incident [get]
+// @Router /incidents [get]
 func (s *Server) GetAllInRadius() http.HandlerFunc {
 	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
 		include := decodeIncludeParam(r)
@@ -90,7 +90,7 @@ func (s *Server) GetAllInRadius() http.HandlerFunc {
 // @Failure 401 {object} nil "Utilisateur non authentifié"
 // @Failure 429 {object} services.ErrorWithCode "Signalement trop fréquent ou interaction déjà existante"
 // @Failure 500 {object} InternalErrorResponse "Erreur interne du serveur"
-// @Router /incident [post]
+// @Router /incidents [post]
 func (s *Server) CreateIncident() http.HandlerFunc {
 	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
 		user, ok := r.Context().Value("user").(*dto.PartialUserDTO)
@@ -138,7 +138,7 @@ func (s *Server) CreateIncident() http.HandlerFunc {
 // @Success 200 {array} dto.IncidentDTO "Liste des anciens incidents (supprimés) de l'utilisateur"
 // @Failure 401 {object} ErrorResponse "Utilisateur non authentifié"
 // @Failure 500 {object} InternalErrorResponse "Erreur interne du serveur"
-// @Router /incident/user/history [get]
+// @Router /incidents/me/history [get]
 func (s *Server) GetUserHistory() http.HandlerFunc {
 	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
 		user, ok := r.Context().Value("user").(*dto.PartialUserDTO)
@@ -169,7 +169,7 @@ func (s *Server) GetUserHistory() http.HandlerFunc {
 // @Produce json
 // @Success 200 {array} dto.TypeDTO "Liste des types d'incidents"
 // @Failure 500 {object} services.ErrorWithCode "Erreur interne du serveur"
-// @Router /incident/types [get]
+// @Router /incidents/types [get]
 func (s *Server) GetIncidentsTypes() http.HandlerFunc {
 	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
 		types, err := s.service.GetAllIncidentTypes(r.Context())
@@ -197,7 +197,7 @@ func (s *Server) GetIncidentsTypes() http.HandlerFunc {
 // @Failure 400 {object} services.ErrorWithCode "ID du type d'incident invalide"
 // @Failure 404 {object} services.ErrorWithCode "Type d'incident non trouvé"
 // @Failure 500 {object} services.ErrorWithCode "Erreur interne du serveur"
-// @Router /incident/types/{id} [get]
+// @Router /incidents/types/{id} [get]
 func (s *Server) GetIncidentTypeById() http.HandlerFunc {
 	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
 		id, err := decodeParamAsInt64("id", r)
@@ -232,7 +232,7 @@ func (s *Server) GetIncidentTypeById() http.HandlerFunc {
 // @Failure 409 {object} services.ErrorWithCode "Incident verrouillé"
 // @Failure 429 {object} services.ErrorWithCode "Trop d'interactions avec cet incident"
 // @Failure 500 {object} services.ErrorWithCode "Erreur interne du serveur"
-// @Router /incident/interact [post]
+// @Router /incidents/interactions [post]
 func (s *Server) UserInteractWithIncident() http.HandlerFunc {
 	return handler.Handler(func(w http.ResponseWriter, r *http.Request) error {
 		user, ok := r.Context().Value("user").(*dto.PartialUserDTO)
