@@ -46,7 +46,7 @@ func (s *Server) Start() error {
 
 	server := &http.Server{
 		Addr:    ":" + s.Config.PORT,
-		Handler: mux,
+		Handler: WithCORS(mux),
 	}
 
 	s.log.Info("Starting server on port: " + server.Addr)
