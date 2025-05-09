@@ -18,7 +18,7 @@ type PartialUserDTO struct {
 }
 
 func UserIdToDTO(userId int64) (*PartialUserDTO, error) {
-	res, err := http.Get(fmt.Sprintf("%s/internal/user/%d", config.UsersBaseUrl, userId))
+	res, err := http.Get(fmt.Sprintf("%s/internal/users/%d", config.UsersBaseUrl, userId))
 	if err != nil {
 		return nil, err
 	}

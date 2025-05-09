@@ -43,7 +43,7 @@ func (s *Server) AuthMiddleware() func(http.Handler) http.Handler {
 			}
 
 			// Requête vers le service users
-			req, err := http.NewRequestWithContext(r.Context(), "GET", fmt.Sprintf("%s/internal/user/check-auth", s.Config.UsersBaseUrl), nil)
+			req, err := http.NewRequestWithContext(r.Context(), "GET", fmt.Sprintf("%s/internal/users/check-auth", s.Config.UsersBaseUrl), nil)
 			if err != nil {
 				s.log.Error("failed to create auth check request", "error", err)
 				w.WriteHeader(http.StatusInternalServerError)
