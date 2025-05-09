@@ -30,7 +30,7 @@ func (s *Server) Start() error {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	mux.Handle("/swagger/", httpSwagger.WrapHandler)
+	mux.Handle("/docs/", httpSwagger.WrapHandler)
 
 	mux.Handle("GET /incidents", s.GetAllInRadius())
 	mux.Handle("GET /incidents/me/history", s.AuthMiddleware()(s.GetUserHistory()))
