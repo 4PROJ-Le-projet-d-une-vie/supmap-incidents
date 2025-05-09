@@ -8,7 +8,7 @@ import (
 type InteractionDTO struct {
 	ID             int64           `json:"id"`
 	User           *PartialUserDTO `json:"user"`
-	IsStillPresent bool            `json:"is-still-present"`
+	IsStillPresent bool            `json:"is_still_present"`
 	CreatedAt      time.Time       `json:"created_at"`
 
 	Incident *IncidentDTO `json:"incident,omitempty"`
@@ -31,8 +31,8 @@ func InteractionToDTO(interaction models.Interaction, includeIncidents Interacti
 }
 
 type InteractionsSummaryDTO struct {
-	IsStillPresentSum int `json:"is-still-present"`
-	NoStillPresentSum int `json:"no-still-present"`
+	IsStillPresentSum int `json:"is_still_present"`
+	NoStillPresentSum int `json:"no_still_present"`
 	Total             int `json:"total"`
 }
 
