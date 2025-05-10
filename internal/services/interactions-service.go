@@ -58,7 +58,7 @@ func (s *Service) CreateInteraction(ctx context.Context, user *dto.PartialUserDT
 	//	Si intéragis, il y a moins d'une heure → Too many requests
 	//	Sinon on accepte l'intéraction
 	for _, interaction := range incident.Interactions {
-		if time.Since(interaction.CreatedAt) < 60*time.Minute {
+		if interaction.UserID == user.ID && time.Since(interaction.CreatedAt) < 60*time.Minute {
 			return nil, &ErrorWithCode{
 				Message: "Too many interactions with this incident",
 				Code:    http.StatusTooManyRequests,
