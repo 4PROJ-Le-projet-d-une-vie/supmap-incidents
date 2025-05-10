@@ -228,6 +228,7 @@ func (s *Server) GetIncidentTypeById() http.HandlerFunc {
 // @Param body body validations.CreateInteractionValidator true "Informations de l'interaction"
 // @Success 200 {object} dto.InteractionDTO "Interaction créée avec succès"
 // @Failure 400 {object} services.ErrorWithCode "Paramètres invalides"
+// @Failure 403 {object} services.ErrorWithCode "Interaction avec son propre incident"
 // @Failure 404 {object} services.ErrorWithCode "Incident non trouvé"
 // @Failure 409 {object} services.ErrorWithCode "Incident verrouillé"
 // @Failure 429 {object} services.ErrorWithCode "Trop d'interactions avec cet incident"
