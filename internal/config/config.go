@@ -11,7 +11,8 @@ type Config struct {
 	ENV             string `env:"ENV" envDefault:"production"`
 	DbUrl           string `env:"DB_URL"`
 	PORT            string `env:"PORT"`
-	UsersBaseUrl    string `env:"USERS_BASE_URL"`
+	UsersHost       string `env:"SUPMAP_USERS_HOST"`
+	UsersPort       string `env:"SUPMAP_USERS_PORT"`
 	RedisHost       string `env:"REDIS_HOST"`
 	RedisPort       string `env:"REDIS_PORT"`
 	IncidentChannel string `env:"REDIS_INCIDENTS_CHANNEL" envDefault:"incidents"`
@@ -27,5 +28,5 @@ func New() (*Config, error) {
 }
 
 func exposeUrls(config *Config) {
-	UsersBaseUrl = config.UsersBaseUrl
+	UsersBaseUrl = fmt.Sprintf("http://%s:%s", config.UsersHost, config.UsersPort)
 }
