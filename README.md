@@ -9,21 +9,96 @@ Microservice de gestion des incidents pour Supmap
 ## Architecture
 
 ```mermaid
-
+graph TD
+  Client[Client] -->|HTTP Request| Router[Router server.go]
+  
+  subgraph Middleware
+  Router -->|CORS| CORSMiddleware[CORS Middleware]
+  Router -->|Authentication Check| AuthMiddleware[Auth Middleware]
+  Router -->|Admin Check| AdminMiddleware[Admin Middleware]
+  end
+  
+  Middleware -->|Validated Request| Handlers[Handlers handlers.go]
+  Handlers -->|DTO Conversion| DTOs[DTOs]
+  DTOs -->|Response| Client
+  
+  subgraph Services["Services Layer"]
+  Handlers -.->|Request / Body validation| Validators[Requests Validators]
+  Validators -.-> Handlers
+  Handlers -->|Business Logic| IncidentService[Incidents Service]
+  Handlers -->|Business Logic| InteractionService[Interactions Service]
+  end
+  
+  subgraph AutoModeration["Auto Moderation"]
+  Scheduler[Scheduler] -->|Lifetime Check| IncidentService
+  end
+  
+  subgraph Repositories["Repository Layer"]
+  direction LR
+  IncidentService --> IncidentRepo[Incidents Repository]
+  InteractionService --> InteractionRepo[Interactions Repository]
+  end
+  
+  subgraph Models["Domain Models"]
+  IncidentRepo --> IncidentModel[Incident Model]
+  IncidentRepo --> TypeModel[Type Model]
+  InteractionRepo --> InteractionModel[Interaction Model]
+  end
+  
+  subgraph Database
+  Models -->|ORM Bun| DB[(PostgreSQL)]
+  end
+  
+  subgraph PubSub["Redis Pub/Sub"]
+  IncidentService -->|Publishes Events| Redis[(Redis)]
+  end
+  
+  subgraph Business
+  Config[Config.go] -->|Environment Variables| Services
+  Config -->|Environment Variables| Repositories
+  Config -->|Environment Variables| PubSub
+  end
+  
+  subgraph DTOs["DTO Layer"]
+  IncidentDTO[Incident DTO]
+  InteractionDTO[Interaction DTO]
+  TypeDTO[Type DTO]
+  end
 ```
 
 ```
-supmap-users/
-├── cmd/api/             # Point d'entrée du microservice (main.go)
+supmap-incidents/
+├── cmd/
+│   └── api/
+│       └── main.go                         # Point d'entrée du microservice
 ├── internal/
-│   ├── api/             # Endpoints HTTP, server, handlers
-│   ├── config/          # Chargement de la configuration
-│   ├── models/          # Entités Bun
-│   └── repository/      # Repository faisant le lien entre le service et la base de données
-│   └── services/        # Services permettant de gérer les règles métier
-├── Dockerfile           # Image Docker du microservice
-├── go.mod / go.sum      # Dépendances Go
-└── README.md
+│   ├── api/            
+│   │   ├── handlers.go                     # Gestionnaires de requêtes HTTP
+│   │   ├── server.go                       # Configuration du serveur HTTP et routes
+│   │   ├── middlewares.go                  # Intercepteurs de requête
+│   │   └── validations/       
+│   │       └── ...                         # Structures de validation
+│   ├── config/
+│   │   └── config.go                       # Configuration et variables d'environnement
+│   ├── models/         
+│   │   ├── dto/                            # DTOs permettant d'exposer les données
+│   │   └── ...                             # Structures de données pour l'ORM Bun
+│   ├── repository/                         # Repository implémentant les requêtes SQL avec l'ORM Bun
+│   │   └── ...
+│   └── services/                           # Services implémentant les fonctionnalités métier du service
+│       ├── ...
+│       ├── redis/                        
+│       │   ├── redis.go                    # Configuration du client Redis
+│       │   └── messages.go                 # Messages envoyés dans le pub/sub
+│       └── scheduler/
+│           ├── scheduler.go                # Service appelant une fonction à intervalle régulier
+│           └── auto-moderate-incidents.go  # Fonctions d'auto modération
+├── docs/                                   # Documentation Swagger auto implémentée avec Swggo
+│   └── ...
+├── Dockerfile                              # Image Docker du microservice
+├── go.mod                                  # Dépendances Go
+├── go.sum /                                # Checksums des dépendances (auto généré)
+└── README.md                               # Documentation du projet
 ```
 
 ## Prérequis et installation
