@@ -165,3 +165,22 @@ swag init -g cmd/api/main.go
 Maintenant, vous pouvez accèder à l'URL http://localhost:8080/swagger/index.html décrivant la structure attendue pour chaque endpoint de l'application
 
 > **NB:** La documentation n'inclut pas les endpoints /internal destinés à une utilisation exclusivement interne
+
+## Authentification
+
+L'authentification dans ce service est entièrement externalisée vers le microservice `supmap-users`.
+
+Lorsqu'une requête authentifiée arrive sur le service, le middleware d'authentification :
+1. Récupère le token JWT depuis le header `Authorization`
+2. Effectue une requête HTTP vers le endpoint interne `/internal/users/check-auth` du service utilisateurs
+3. Vérifie la réponse :
+  - Si le token est valide, la requête continue son traitement
+  - Si le token est invalide ou expiré, une erreur 401 ou 403 est retournée
+
+Cette approche permet de :
+- Centraliser la logique d'authentification dans un seul service
+- Garantir la cohérence des vérifications de sécurité
+- Simplifier la maintenance en évitant la duplication de code
+
+> **Note:** Les routes `/internal` ne sont accessibles que depuis le réseau interne et ne nécessitent pas d'authentification supplémentaire
+
