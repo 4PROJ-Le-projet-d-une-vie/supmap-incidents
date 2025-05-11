@@ -857,7 +857,7 @@ Règles de validation :
 
 ```
 mux.Handle("POST /incidents/interactions", s.AuthMiddleware()(s.UserInteractWithIncident()))
-└─> func (s *Server) AuthMiddleware() func(http.Handler) http.Handler                                                                                                   # Authentifie l'utilisateur 
+├─> func (s *Server) AuthMiddleware() func(http.Handler) http.Handler                                                                                                   # Authentifie l'utilisateur 
 │   └─> GET /internal/users/check-auth                                                                                                                                  # Vérification du token par le service users
 └─> func (s *Server) UserInteractWithIncident() http.HandlerFunc                                                                                                        # Handler HTTP
     ├─> func (s *Service) CreateInteraction(ctx context.Context, user *dto.PartialUserDTO, body *validations.CreateInteractionValidator) (*models.Interaction, error)   # Service
