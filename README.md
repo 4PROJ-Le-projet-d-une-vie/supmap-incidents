@@ -1,4 +1,4 @@
-# supmap-users
+# supmap-incidents
 
 Microservice de gestion des incidents pour Supmap
 
@@ -111,7 +111,7 @@ supmap-incidents/
 ```sh
 # Cloner le repo
 git clone https://github.com/4PROJ-Le-projet-d-une-vie/supmap-incidents.git
-cd supmap-users
+cd supmap-incidents
 
 # Démarrer le service (nécessite les variables d'environnement, voir ci-dessous)
 go run ./cmd/api
@@ -143,12 +143,16 @@ echo 'YOUR_GITHUB_TOKEN' | docker login ghcr.io -u YOUR_GITHUB_USERNAME --passwo
 
 La configuration se fait via des variables d'environnement ou un fichier `.env` :
 
-|   Variable   | Description                                                                          |
-|:------------:|:-------------------------------------------------------------------------------------|
-|    `ENV`     | Définit l'environnement dans lequel est exécuté le programme (par défaut production) |
-|   `DB_URL`   | URL complète vers la base de donnée                                                  |
-|    `PORT`    | Port sur lequel écoutera le service pour recevoir les requêtes                       |
-| `JWT_SECRET` | Secret permettant de vérifier l'authenticité d'un token JWT pour l'authentification  |
+|         Variable          | Description                                                                                  |
+|:-------------------------:|:---------------------------------------------------------------------------------------------|
+|           `ENV`           | Définit l'environnement dans lequel est exécuté le programme (par défaut production)         |
+|         `DB_URL`          | URL complète vers la base de donnée                                                          |
+|          `PORT`           | Port sur lequel écoutera le service pour recevoir les requêtes                               |
+|    `SUPMAP_USERS_HOST`    | Host du service utilisateur                                                                  |
+|    `SUPMAP_USERS_PORT`    | Port du service utilisateur sur la machine host                                              |
+|       `REDIS_HOST`        | Host du service redis                                                                        |
+|       `REDIS_PORT`        | Port du service redis sur la machine host                                                    |
+| `REDIS_INCIDENTS_CHANNEL` | Nom du channel du pub/sub redis dans lequel sont publiés les messages (par défaut incidents) |
 
 ## Swagger
 
@@ -225,3 +229,644 @@ var changelog embed.FS
 // Connexion à la base de données
 goose.SetBaseFS(changelog)
 ```
+
+## Endpoints
+
+Les endpoints ci-dessous sont présentés selon l'ordre dans lequel ils sont définit dans [server.go](internal/api/server.go)
+
+<details>
+<summary>GET /incidents</summary>
+
+### GET /incidents
+
+Get endpoint permet de trouver tous les incidents dans un rayon autour d'un point. Il est possible de filtrer par type d'incident.
+
+#### Authentification / Autorisations
+
+Aucune authentification n'est nécessaire, cet endpoint est public.
+
+#### Paramètres / Corp de requête
+
+| Paramètre | Type    | Description                                                                                                                                           |
+|-----------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| lat       | float64 | Latitude du point central de la zone de recherche                                                                                                     |
+| lon       | float64 | Longitude du point central de la zone de recherche                                                                                                    |
+| radius    | int64   | Rayon en mètres dans lequel seront cherchés les incidents                                                                                             |
+| include   | string  | Valeurs possibles :<br/>- interactions (inclut toutes les intéractions de l'incident)<br/>- summary (inclut un résumé des intéractions de l'incident) |
+
+#### Réponse
+
+<details>
+<summary>include non définit</summary>
+
+##### include non définit
+```json
+[
+  {
+    "id": 0,
+    "user": {
+      "handle": "string",
+      "id": 0,
+      "role": {
+        "name": "string"
+      }
+    },
+    "type": {
+      "id": 0,
+      "name": "string",
+      "description": "string",
+      "need_recalculation": true
+    },
+    "lat": 0,
+    "lon": 0,
+    "created_at": "string",
+    "deleted_at": "string",
+    "updated_at": "string",
+    "distance": 0
+  },
+  ...
+]
+```
+</details>
+
+<details>
+<summary>include définit à interactions</summary>
+
+##### include définit à `interactions`
+```json
+[
+  {
+    "id": 0,
+    "user": {
+      "handle": "string",
+      "id": 0,
+      "role": {
+        "name": "string"
+      }
+    },
+    "type": {
+      "description": "string",
+      "id": 0,
+      "name": "string",
+      "need_recalculation": true
+    },
+    "lat": 0,
+    "lon": 0,
+    "interactions": [
+      {
+        "id": 0,
+        "user": {
+          "handle": "string",
+          "id": 0,
+          "role": {
+            "name": "string"
+          }
+        },
+        "is_still_present": true,
+        "created_at": "string"
+      },
+      ...
+    ],
+    "created_at": "string",
+    "updated_at": "string",
+    "deleted_at": "string",
+    "distance": 0
+  },
+  ...
+]
+```
+</details>
+
+<details>
+<summary>Interactions définit à summary</summary>
+
+##### Interactions définit à `summary`
+
+```json
+[
+  {
+    "id": 0,
+    "user": {
+      "handle": "string",
+      "id": 0,
+      "role": {
+        "name": "string"
+      }
+    },
+    "type": {
+      "description": "string",
+      "id": 0,
+      "need_recalculation": true,
+      "name": "string"
+    },
+    "lat": 0,
+    "lon": 0,
+    "interactions_summary": {
+      "is_still_present": 0,
+      "no_still_present": 0,
+      "total": 0
+    },
+    "created_at": "string",
+    "updated_at": "string",
+    "deleted_at": "string",
+    "distance": 0
+  },
+  ...
+]
+```
+</details>
+   
+#### Trace
+
+```
+mux.Handle("GET /incidents", s.GetAllInRadius())
+└─> func (s *Server) GetAllInRadius() http.HandlerFunc                                                                                                                    # Handler HTTP
+    ├─> func (s *Service) FindIncidentsInRadius(ctx context.Context, typeId *int64, lat, lon float64, radius int64) ([]models.IncidentWithDistance, error)                # Service
+    │   ├─> func (i *Incidents) FindIncidentTypeById(ctx context.Context, id *int64) (*models.Type, error)                                                                # Repository
+    │   ├─> func (i *Incidents) FindIncidentsInZone(ctx context.Context, lat, lon *float64, radius int64, typeId *int64) ([]models.IncidentWithDistance, error)           # Repository
+    │   └─> func (i *Incidents) FindIncidentById(ctx context.Context, id int64) (*models.Incident, error)                                                                 # Repository
+    │       └─> func (i *Incidents) FindIncidentByIdTx(ctx context.Context, exec bun.IDB, id int64) (*models.Incident, error)                                             # Repository (Inclut une gestion de transactions concurrentes)
+    ├─> func IncidentWithDistanceToDTO(incident *models.IncidentWithDistance, interactionsState InteractionsResultState) *IncidentWithDistanceDTO                         # Conversion DTO
+    └─> mathdeodrd.handler/func Encode[T any](v T, status int, w http.ResponseWriter) error                                                                               # Ecriture de la réponse avec une fonction générique    
+```
+</details>
+
+<details>
+<summary>GET /incidents/me/history</summary>
+
+### GET /incidents/me/history
+
+Récupère l'historique des incidents créés par l'utilisateur authentifié qui ont été supprimés (auto-modération ou interactions négatives).
+
+#### Authentification / Autorisations
+- L'utilisateur doit être authentifié (sinon code http 401)
+- Une session valide est requise (sinon code http 403)
+
+#### Paramètres / Corps de requête
+
+| Paramètre | Type   | Description                                                                                                                                           |
+|-----------|--------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| include   | string | Valeurs possibles :<br/>- interactions (inclut toutes les intéractions de l'incident)<br/>- summary (inclut un résumé des intéractions de l'incident) |
+
+#### Réponse
+
+<details>
+<summary>include non définit</summary>
+
+##### include non définit
+```json
+[
+  {
+    "id": 0,
+    "user": {
+      "handle": "string",
+      "id": 0,
+      "role": {
+        "name": "string"
+      }
+    },
+    "type": {
+      "id": 0,
+      "name": "string",
+      "description": "string",
+      "need_recalculation": true
+    },
+    "lat": 0,
+    "lon": 0,
+    "created_at": "string",
+    "deleted_at": "string",
+    "updated_at": "string",
+    "distance": 0
+  },
+  ...
+]
+```
+</details>
+
+<details>
+<summary>include définit à interactions</summary>
+
+##### include définit à `interactions`
+```json
+[
+  {
+    "id": 0,
+    "user": {
+      "handle": "string",
+      "id": 0,
+      "role": {
+        "name": "string"
+      }
+    },
+    "type": {
+      "description": "string",
+      "id": 0,
+      "name": "string",
+      "need_recalculation": true
+    },
+    "lat": 0,
+    "lon": 0,
+    "interactions": [
+      {
+        "id": 0,
+        "user": {
+          "handle": "string",
+          "id": 0,
+          "role": {
+            "name": "string"
+          }
+        },
+        "is_still_present": true,
+        "created_at": "string"
+      },
+      ...
+    ],
+    "created_at": "string",
+    "updated_at": "string",
+    "deleted_at": "string",
+    "distance": 0
+  },
+  ...
+]
+```
+</details>
+
+<details>
+<summary>Interactions définit à summary</summary>
+
+##### Interactions définit à `summary`
+
+```json
+[
+  {
+    "id": 0,
+    "user": {
+      "handle": "string",
+      "id": 0,
+      "role": {
+        "name": "string"
+      }
+    },
+    "type": {
+      "description": "string",
+      "id": 0,
+      "need_recalculation": true,
+      "name": "string"
+    },
+    "lat": 0,
+    "lon": 0,
+    "interactions_summary": {
+      "is_still_present": 0,
+      "no_still_present": 0,
+      "total": 0
+    },
+    "created_at": "string",
+    "updated_at": "string",
+    "deleted_at": "string",
+    "distance": 0
+  },
+  ...
+]
+```
+</details>
+
+#### Trace
+
+```
+mux.Handle("GET /incidents/me/history", s.AuthMiddleware()(s.GetUserHistory()))
+├─> func (s *Server) AuthMiddleware() func(http.Handler) http.Handler                                                       # Authentifie l'utilisateur
+│   └─> GET /internal/users/check-auth                                                                                      # Vérification du token par le service users
+└─> func (s *Server) GetUserHistory() http.HandlerFunc                                                                      # Handler HTTP
+    ├─> func (s *Service) GetUserHistory(ctx context.Context, user *dto.PartialUserDTO) ([]models.Incident, error)          # Service
+    │   └─> func (i *Incidents) FindUserHistory(ctx context.Context, user *dto.PartialUserDTO) ([]models.Incident, error)   # Repository
+    ├─> func IncidentToDTO(incident *models.Incident, interactionsState InteractionsResultState) *IncidentDTO               # Conversion DTO
+    └─> mathdeodrd.handler/func Encode[T any](v T, status int, w http.ResponseWriter) error                                 # Ecriture de la réponse
+```
+</details>
+
+<details>
+<summary>GET /incidents/types</summary>
+
+### GET /incidents/types
+
+Récupère la liste de tous les types d'incidents disponibles dans l'application.
+
+#### Authentification / Autorisations
+Aucune authentification requise, endpoint public.
+
+#### Paramètres / Corps de requête
+Aucun paramètre requis.
+
+#### Réponse
+
+```json
+[
+  {
+    "id": 0,
+    "name": "string",
+    "description": "string",
+    "need_recalculation": true
+  },
+  ...
+]
+```
+
+#### Trace
+
+```
+mux.Handle("GET /incidents/types", s.GetIncidentsTypes())
+└─> func (s *Server) GetIncidentsTypes() http.HandlerFunc                                               # Handler HTTP
+    ├─> func (s *Service) GetAllIncidentTypes(ctx context.Context) ([]models.Type, error)               # Service
+    │   └─> func (i *Incidents) FindAllIncidentTypes(ctx context.Context) ([]models.Type, error)        # Repository
+    ├─> func TypeToDTO(type *models.Type) *TypeDTO                                                      # Conversion DTO
+    └─> mathdeodrd.handler/func Encode[T any](v T, status int, w http.ResponseWriter) error             # Écriture de la réponse
+```
+
+### GET /incidents/types/{id}
+
+Récupère les détails d'un type d'incident spécifique par son ID.
+
+#### Authentification / Autorisations
+Aucune authentification requise, endpoint public.
+
+#### Paramètres / Corps de requête
+
+| Paramètre | Type  | Description                      |
+|-----------|-------|----------------------------------|
+| id        | int64 | ID du type d'incident recherché  |
+
+#### Réponse
+
+```json
+{
+  "id": 0,
+  "name": "string",
+  "description": "string",
+  "need_recalculation": true
+}
+```
+
+#### Trace
+
+```
+mux.Handle("GET /incidents/types/{id}", s.GetIncidentTypeById())
+└─> func (s *Server) GetIncidentTypeById() http.HandlerFunc                                                 # Handler HTTP
+    ├─> func (s *Service) FindTypeById(ctx context.Context, id int64) (*models.Type, error)                 # Service
+    │   └─> func (i *Incidents) FindIncidentTypeById(ctx context.Context, id *int64) (*models.Type, error)  # Repository
+    ├─> func TypeToDTO(type *models.Type) *TypeDTO                                                          # Conversion DTO
+    └─> mathdeodrd.handler/func Encode[T any](v T, status int, w http.ResponseWriter) error                 # Ecriture de la réponse
+```
+</details>
+
+<details>
+<summary>POST /incidents</summary>
+
+### POST /incidents
+
+Crée un nouvel incident ou ajoute une interaction positive à un incident existant si un incident similaire existe déjà dans un rayon de 100m.
+
+#### Authentification / Autorisations
+- L'utilisateur doit être authentifié (sinon code http 401)
+- Une session valide est requise (sinon code http 403)
+- Un utilisateur ne peut pas créer plus d'un incident par minute (code http 429)
+
+#### Paramètres / Corps de requête
+
+```json
+{
+  "type_id": 0,
+  "lat": 0,
+  "lon": 0
+}
+```
+
+Règles de validation :
+
+- type_id : ID d'un type d'incident existant
+- lat : Latitude entre -90 et 90
+- lon : Longitude entre -180 et 180
+
+#### Réponse
+
+```json
+{
+  "id": 0,
+  "user": {
+    "handle": "string",
+    "id": 0,
+    "role": {
+      "name": "string"
+    }
+  },
+  "type": {
+    "description": "string",
+    "id": 0,
+    "name": "string",
+    "need_recalculation": true
+  },
+  "lat": 0,
+  "lon": 0,
+  "created_at": "string",
+  "updated_at": "string",
+  "deleted_at": "string"
+}
+```
+
+#### Trace
+
+```
+mux.Handle("POST /incidents", s.AuthMiddleware()(s.CreateIncident()))
+├─> func (s *Server) AuthMiddleware() func(http.Handler) http.Handler                                                                                             # Authentifie l'utilisateur 
+│   └─> GET /internal/users/check-auth                                                                                                                            # Vérification du token par le service users
+└─> func (s *Server) CreateIncident() http.HandlerFunc                                                                                                            # Handler HTTP
+    ├─> func (s *Service) CreateIncident(ctx context.Context, user *dto.PartialUserDTO, body *validations.CreateIncidentValidator) (*models.Incident, error)      # Service
+    │   ├─> func (i *Incidents) FindIncidentTypeById(ctx context.Context, id *int64) (*models.Type, error)                                                        # Repository
+    │   ├─> func (i *Incidents) GetLastUserIncident(ctx context.Context, user *dto.PartialUserDTO) (*models.Incident, error)                                      # Repository
+    │   ├─> func (i *Incidents) FindIncidentsInZone(ctx context.Context, lat, lon *float64, radius int64, typeId *int64) ([]models.IncidentWithDistance, error)   # Repository
+    │   ├─> func (i *Incidents) FindIncidentById(ctx context.Context, id int64) (*models.Incident, error)                                                         # Repository
+    │   ├─> func (i *Incidents) CreateIncident(ctx context.Context, incident *models.Incident) error                                                              # Repository (Inclut une gestion de transactions concurrentes) 
+    │   └─> func (r *Redis) PublishMessage(channel string, payload any) error                                                                                     # Publication de l'événement Redis
+    ├─> func IncidentToDTO(incident *models.Incident, interactionsState InteractionsResultState) *IncidentDTO                                                     # Conversion DTO
+    └─> mathdeodrd.handler/func Encode[T any](v T, status int, w http.ResponseWriter) error                                                                       # Ecriture de la réponse
+```
+</details>
+
+<details>
+<summary>POST /incidents/interactions</summary>
+
+### POST /incidents/interactions
+
+Permet à un utilisateur d'interagir avec un incident existant en confirmant ou infirmant sa présence.
+
+#### Authentification / Autorisations
+
+- L'utilisateur doit être authentifié (sinon code http 401)
+- Une session valide est requise (sinon code http 403)
+- Un utilisateur ne peut pas interagir avec son propre incident (code http 403)
+- Un utilisateur ne peut pas interagir plus d'une fois par heure avec le même incident (code http 429)
+
+#### Paramètres / Corps de requête
+
+```json
+{
+  "incident_id": 0,
+  "is_still_present": true
+}
+```
+
+Règles de validation :
+
+- incident_id : ID d'un incident existant
+- is_still_present : Booléen indiquant si l'incident est toujours présent
+
+#### Réponse
+
+<details>
+<summary>include non définit</summary>
+
+##### include non définit
+```json
+{
+  "id": 0,
+  "user": {
+    "handle": "string",
+    "id": 0,
+    "role": {
+      "name": "string"
+    }
+  },
+  "incident": {
+    "id": 0,
+    "user": {
+      "handle": "string",
+      "id": 0,
+      "role": {
+        "name": "string"
+      }
+    },
+    "type": {
+      "description": "string",
+      "id": 0,
+      "name": "string",
+      "need_recalculation": true
+    },
+    "lat": 0,
+    "lon": 0,
+    "created_at": "string",
+    "updated_at": "string",
+    "deleted_at": "string"
+  },
+  "created_at": "string",
+  "is_still_present": true
+}
+```
+</details>
+
+<details>
+<summary>include définit à interactions</summary>
+
+##### include définit à `interactions`
+```json
+{
+  "id": 0,
+  "user": {
+    "handle": "string",
+    "id": 0,
+    "role": {
+      "name": "string"
+    }
+  },
+  "incident": {
+    "id": 0,
+    "user": {
+      "handle": "string",
+      "id": 0,
+      "role": {
+        "name": "string"
+      }
+    },
+    "type": {
+      "description": "string",
+      "id": 0,
+      "name": "string",
+      "need_recalculation": true
+    },
+    "lat": 0,
+    "lon": 0,
+    "interactions": [
+      "string"
+    ],
+    "created_at": "string",
+    "updated_at": "string",
+    "deleted_at": "string"
+  },
+  "created_at": "string",
+  "is_still_present": true
+}
+```
+</details>
+
+<details>
+<summary>Interactions définit à summary</summary>
+
+##### Interactions définit à `summary`
+
+```json
+{
+  "id": 0,
+  "user": {
+    "handle": "string",
+    "id": 0,
+    "role": {
+      "name": "string"
+    }
+  },
+  "incident": {
+    "id": 0,
+    "user": {
+      "handle": "string",
+      "id": 0,
+      "role": {
+        "name": "string"
+      }
+    },
+    "type": {
+      "description": "string",
+      "id": 0,
+      "name": "string",
+      "need_recalculation": true
+    },
+    "lat": 0,
+    "lon": 0,
+    "interactions_summary": {
+      "is_still_present": 0,
+      "no_still_present": 0,
+      "total": 0
+    },
+    "created_at": "string",
+    "updated_at": "string",
+    "deleted_at": "string"
+  },
+  "created_at": "string",
+  "is_still_present": true
+}
+```
+</details>
+
+#### Trace
+
+```
+mux.Handle("POST /incidents/interactions", s.AuthMiddleware()(s.UserInteractWithIncident()))
+└─> func (s *Server) AuthMiddleware() func(http.Handler) http.Handler                                                                                                   # Authentifie l'utilisateur 
+│   └─> GET /internal/users/check-auth                                                                                                                                  # Vérification du token par le service users
+└─> func (s *Server) UserInteractWithIncident() http.HandlerFunc                                                                                                        # Handler HTTP
+    ├─> func (s *Service) CreateInteraction(ctx context.Context, user *dto.PartialUserDTO, body *validations.CreateInteractionValidator) (*models.Interaction, error)   # Service
+    │   ├─> func (i *Incidents) FindIncidentByIdTx(ctx context.Context, tx bun.IDB, id int64) (*models.Incident, error)                                                 # Repository avec transaction
+    │   ├─> func (i *Interactions) InsertTx(ctx context.Context, exec bun.IDB, interaction *models.Interaction) error                                                   # Repository avec transaction
+    │   ├─> func (i *Incidents) UpdateIncidentTx(ctx context.Context, exec bun.IDB, incident *models.Incident) error                                                    # Repository avec transaction
+    │   ├─> func (i *Interactions) FindInteractionByIdTx(ctx context.Context, exec bun.IDB, id int64) (*models.Interaction, error)                                      # Repository avec transaction
+    │   └─> func (r *Redis) PublishMessage(channel string, payload any) error                                                                                           # Publication de l'événement Redis
+    ├─> func InteractionToDTO(interaction models.Interaction, interactionsState InteractionsResultState) *InteractionDTO                                                # Conversion DTO
+    └─> mathdeodrd.handler/func Encode[T any](v T, status int, w http.ResponseWriter) error                                                                             # Ecriture de la réponse
+```
+</details>
