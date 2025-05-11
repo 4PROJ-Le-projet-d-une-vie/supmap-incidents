@@ -230,6 +230,123 @@ var changelog embed.FS
 goose.SetBaseFS(changelog)
 ```
 
+## Auto-modération des incidents
+
+Le service intègre un système d'auto-modération asynchrone qui vérifie et nettoie périodiquement les incidents selon des règles métier définies.
+
+### Fonctionnement du scheduler
+
+Le scheduler utilise un `time.Ticker` pour exécuter des tâches de modération à intervalles réguliers de manière asynchrone :
+
+```go
+func (s *Scheduler) Run() {
+    go func() {
+        for {
+            select {
+            case <-s.ticker.C:  // Channel bloquant qui reçoit un signal à chaque tick
+                  s.CheckLifetimeWithoutConfirmation(ctx, tx)
+                  s.CheckGlobalLifeTime(ctx, tx)
+            case <-s.stop:      // Channel permettant d'arrêter proprement le scheduler
+                  s.ticker.Stop()
+                  return
+            }
+        }
+    }()
+}
+```
+Le scheduler complet est dans [scheduler.go](internal/services/scheduler/scheduler.go)
+
+Le scheduler est lancé dans une goroutine (`go func()`) pour s'exécuter de manière asynchrone sans bloquer le reste de l'application. Le select attend alors deux types d'événements :
+- Un signal du ticker à intervalle régulier pour lancer les vérifications
+- Un signal d'arrêt pour terminer proprement le scheduler
+
+### Règles de modération
+
+Deux types de vérifications sont effectuées sur les incidents actifs :
+
+Durée sans confirmation :
+```go
+noInteractionThreshold := time.Duration(incident.Type.LifetimeWithoutConfirmation)
+if time.Since(incident.UpdatedAt) > noInteractionThreshold*time.Second {
+    // Suppression de l'incident
+}
+```
+Si un incident n'a reçu aucune interaction pendant une durée définie par son type, il est automatiquement supprimé.
+
+Durée de vie globale :
+```go
+incidentTTL := time.Duration(incident.Type.GlobalLifetime)
+if time.Since(incident.CreatedAt) > incidentTTL*time.Second {
+    // Suppression de l'incident
+}
+```
+Chaque type d'incident définit une durée de vie maximale. Une fois cette durée dépassée, l'incident est automatiquement supprimé.
+
+Lorsqu'un incident est supprimé par l'auto-modération, un message est publié dans Redis pour notifier les autres services :
+```go
+err = s.redis.PublishMessage(s.config.IncidentChannel, &rediss.IncidentMessage{
+    Data:   *dto.IncidentToRedis(&incident),
+    Action: rediss.Deleted,
+})
+```
+
+## Communication par Redis Pub/Sub
+
+Redis est utilisé dans ce service comme un système de messagerie en temps réel grâce à son mécanisme de Publish/Subscribe (Pub/Sub). Cette approche permet de notifier les autres services du système lors de changements d'état des incidents.
+
+### Fonctionnement du Pub/Sub Redis
+
+Le Pub/Sub est un pattern de messagerie où les émetteurs (publishers) envoient des messages dans des canaux spécifiques, sans connaissance directe des destinataires. Les récepteurs (subscribers) s'abonnent aux canaux qui les intéressent pour recevoir ces messages.
+
+Dans notre application, nous utilisons ce mécanisme pour publier trois types d'événements :
+```go
+const (
+    Create    Action = "create"    // Nouvel incident créé
+    Certified Action = "certified" // Incident certifié par suffisamment d'interactions positives
+    Deleted   Action = "deleted"   // Incident supprimé (manuellement ou par auto-modération)
+)
+```
+
+### Implémentation
+
+Le service utilise un client Redis asynchrone qui publie les messages via un channel Go :
+```go
+type Redis struct {
+    client *redis.Client
+    send   chan redis.Message    // Channel pour les messages à envoyer
+}
+
+func (r *Redis) Run(ctx context.Context) {
+    go r.publisher(ctx)  // Démarre le publisher dans une goroutine
+}
+
+func (r *Redis) publisher(ctx context.Context) {
+    for {
+        select {
+        case msg := <-r.send:  // Attend les messages à publier
+            err := r.client.Publish(ctx, msg.Channel, msg.Payload).Err()
+            if err != nil {
+                r.log.Error("redis publish message error", "error", err)
+            }
+        case <-ctx.Done():     // Arrêt propre lors de la fermeture du service
+            return
+        }
+    }
+}
+```
+
+### Structure des messages
+Les messages publiés suivent une structure commune :
+
+```go
+type IncidentMessage struct {
+    Data   dto.IncidentRedis `json:"data"`    // Données de l'incident
+    Action Action            `json:"action"`   // Type d'action (create/certified/deleted)
+}
+```
+
+Cette approche permet aux autres services de réagir en temps réel aux changements d'état des incidents, permettant la mise à jour des interfaces utilisateur en cours de navigation.
+
 ## Endpoints
 
 Les endpoints ci-dessous sont présentés selon l'ordre dans lequel ils sont définit dans [server.go](internal/api/server.go)
