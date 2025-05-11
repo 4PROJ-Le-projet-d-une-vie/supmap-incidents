@@ -347,6 +347,64 @@ type IncidentMessage struct {
 
 Cette approche permet aux autres services de réagir en temps réel aux changements d'état des incidents, permettant la mise à jour des interfaces utilisateur en cours de navigation.
 
+## Gestion des transactions SQL concurrentes
+
+Dans un environnement distribué où plusieurs instances du service peuvent être déployées, la gestion de la concurrence est cruciale pour maintenir l'intégrité des données.
+
+### Problématique
+
+Le service étant stateless et scalable horizontalement, plusieurs scénarios problématiques peuvent survenir :
+- Plusieurs utilisateurs interagissent simultanément avec le même incident
+- L'auto-modération s'exécute pendant qu'un utilisateur interagit avec un incident
+- Les données lues peuvent devenir obsolètes entre le moment de la lecture et de l'écriture
+
+Sans gestion de la concurrence, ces situations peuvent mener à :
+- Des données corrompues ou incohérentes
+- Des règles d'auto-modération appliquées sur des données périmées
+- Des mises à jour perdues ou écrasées
+
+### Solution : Transactions avec verrouillage
+
+Le service utilise des transactions SQL avec la clause `FOR UPDATE` qui permet de verrouiller les enregistrements pendant leur modification. Voici un exemple simplifié :
+
+```go
+// Récupération d'une transaction
+tx, err := s.incidents.AskForTx(ctx)
+if err != nil {
+    return nil, err
+}
+// Relachement de la transaction à la fin de la fonction
+defer func() {
+  if err != nil {
+    s.log.Info("Rollback de la transaction")
+    _ = tx.Rollback()
+  } else {
+    s.log.Info("Commit de la transaction")
+    _ = tx.Commit()
+  }
+}()
+
+// Verrouille l'enregistrement pour les autres transactions
+exec.NewSelect().
+  Model(&incident).
+  For("UPDATE").    // Équivalent SQL: SELECT ... FOR UPDATE
+  Scan(ctx)
+```
+
+### Fonctionnement
+
+Quand une transaction démarre :
+
+1. Elle pose un verrou sur l'incident concerné
+   - Les autres requêtes souhaitant modifier ou consulter (avec FOR UPDATE) cet incident sont mises en attente
+   - La transaction effectue ses modifications (interactions, auto-modération)
+   - Une fois la transaction terminée, le verrou est libéré
+   - Les requêtes en attente sont alors traitées séquentiellement :
+
+2. Chacune accède aux données dans leur état le plus récent
+  - Les règles métier s'appliquent sur des données cohérentes
+  - L'intégrité des données est garantie même avec plusieurs instances du service
+
 ## Endpoints
 
 Les endpoints ci-dessous sont présentés selon l'ordre dans lequel ils sont définit dans [server.go](internal/api/server.go)
